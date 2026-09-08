@@ -1,0 +1,19 @@
+--- a/smali/com/sony/imaging/app/pictureeffectplus/PictureEffectPlus.smali	2026-09-07 07:48:18
++++ b/smali/com/sony/imaging/app/pictureeffectplus/PictureEffectPlus.smali	2026-09-07 08:03:07
+@@ -200,15 +200,7 @@
+     invoke-static {v3, v4}, Lcom/sony/imaging/app/base/shooting/widget/AppIconView;->setIcon(II)V
+ 
+     .line 106
+-    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/PictureEffectPlus;->getResources()Landroid/content/res/Resources;
+-
+-    move-result-object v3
+-
+-    const v4, 0x7f090028
+-
+-    invoke-virtual {v3, v4}, Landroid/content/res/Resources;->getString(I)Ljava/lang/String;
+-
+-    move-result-object v3
++    const-string v3, "\u7406\u5149\u76f8\u673a"
+ 
+     invoke-static {v3}, Lcom/sony/imaging/app/base/shooting/widget/AppNameView;->setText(Ljava/lang/String;)V
+ 

@@ -1,0 +1,44 @@
+# OS / Editor Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.qwen/
+
+# Python Cache & Build
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Keystores & Sensitive Keys (DO NOT COMMIT)
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+*.pk8
+
+# Official Sony Copyrighted Binaries & Decompiled Trees
+# (Avoid DMCA takedowns - keep git repository lean and clean)
+official_apks/
+decompiled/
+
+# Local APK Builds & Backups
+*.apk
+*.apk.old
+*.zip
+*.tar.gz
+build/
+dist/
+/tmp/
+unsigned.apk

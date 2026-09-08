@@ -1,0 +1,59 @@
+--- a/smali/com/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController.smali	2026-09-07 07:48:18
++++ b/smali/com/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController.smali	2026-09-07 08:03:28
+@@ -2835,9 +2835,8 @@
+ 
+     move-result-object v2
+ 
+-    invoke-static {v1, v2}, Lcom/sony/imaging/app/pictureeffectplus/AppLog;->enter(Ljava/lang/String;Ljava/lang/String;)V
++    invoke-static {p0, p1}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->resetHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;)V
+ 
+-    .line 1589
+     sget-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->mMode:Ljava/lang/String;
+ 
+     const-string v2, "off"
+@@ -5860,9 +5859,17 @@
+ 
+     move-result-object v3
+ 
+-    invoke-static {v2, v3}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
++    invoke-static {p0, p1, p2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->applyHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;Ljava/lang/String;)Z
+ 
+-    .line 1615
++    move-result v2
++
++    if-eqz v2, :cond_ricoh_skip
++
++    const/4 v1, 0x1
++
++    goto/16 :cond_2
++
++    :cond_ricoh_skip
+     const-string v2, "part-color-plus"
+ 
+     invoke-virtual {v2, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+@@ -10448,6 +10455,14 @@
+     iput-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->previousOptionValue:Ljava/lang/String;
+ 
+     goto/16 :goto_0
++.end method
++
++.method public getCameraSetting()Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;
++    .locals 1
++
++    iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->mCamSet:Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;
++
++    return-object v0
+ .end method
+ 
+ .method public onTerminate()V
+@@ -10461,9 +10476,8 @@
+ 
+     move-result-object v2
+ 
+-    invoke-static {v1, v2}, Lcom/sony/imaging/app/pictureeffectplus/AppLog;->enter(Ljava/lang/String;Ljava/lang/String;)V
++    invoke-static {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->onTerminateHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)V
+ 
+-    .line 3006
+     invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getBackupEffectValue()Ljava/lang/String;
+ 
+     move-result-object v1

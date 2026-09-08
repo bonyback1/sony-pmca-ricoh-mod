@@ -638,6 +638,104 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-static {{p0, v0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->resetHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;)V
     return-void
 .end method
+
+.method public static getFilterName(Ljava/lang/String;)Ljava/lang/String;
+    .locals 1
+
+    if-eqz p0, :cond_none
+
+    const-string v0, "pop-color"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_neg
+    const-string v0, "\u7406\u5149 GR \u6b63\u7247"
+    return-object v0
+
+    :cond_check_neg
+    const-string v0, "retro-photo"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_hcbw
+    const-string v0, "\u7406\u5149\u8d1f\u7247"
+    return-object v0
+
+    :cond_check_hcbw
+    const-string v0, "richtone-mono"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_daido
+    const-string v0, "\u9ad8\u5bf9\u6bd4\u9ed1\u767d"
+    return-object v0
+
+    :cond_check_daido
+    const-string v0, "rough-mono"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_xpro
+    const-string v0, "\u68ee\u5c71\u5927\u9053\u98ce"
+    return-object v0
+
+    :cond_check_xpro
+    const-string v0, "watercolor"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_none
+    const-string v0, "\u6b63\u8d1f\u9006\u51b2"
+    return-object v0
+
+    :cond_none
+    const/4 v0, 0x0
+    return-object v0
+.end method
+
+.method public static getFilterGuide(Ljava/lang/String;)Ljava/lang/String;
+    .locals 1
+
+    if-eqz p0, :cond_none
+
+    const-string v0, "pop-color"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_neg
+    const-string v0, "\u7406\u5149 GR \u6b63\u7247\u8272\u5f69\u6548\u679c (Ricoh Positive Film)"
+    return-object v0
+
+    :cond_check_neg
+    const-string v0, "retro-photo"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_hcbw
+    const-string v0, "\u7406\u5149\u8d1f\u7247\u80f6\u7247\u8272\u5f69\u6548\u679c (Ricoh Negative Film)"
+    return-object v0
+
+    :cond_check_hcbw
+    const-string v0, "richtone-mono"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_daido
+    const-string v0, "\u9ad8\u5bf9\u6bd4\u9ed1\u767d\u80f6\u7247\u6548\u679c (Ricoh High Contrast B&W)"
+    return-object v0
+
+    :cond_check_daido
+    const-string v0, "rough-mono"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_xpro
+    const-string v0, "\u68ee\u5c71\u5927\u9053\u98ce\u7c97\u7c9e\u9ad8\u5bf9\u6bd4\u9ed1\u767d (Moriyama Daido B&W)"
+    return-object v0
+
+    :cond_check_xpro
+    const-string v0, "watercolor"
+    invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_none
+    const-string v0, "\u6b63\u8d1f\u9006\u51b2\u72ec\u7279\u8272\u5f69\u53cd\u51b2\u6548\u679c (Ricoh Cross Process)"
+    return-object v0
+
+    :cond_none
+    const/4 v0, 0x0
+    return-object v0
+.end method
 '''
 
 import sys

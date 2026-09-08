@@ -36,9 +36,11 @@ decompiled/
 # Local APK Builds & Backups
 *.apk
 *.apk.old
+*.idsig
 *.zip
 *.tar.gz
 build/
 dist/
 /tmp/
 unsigned.apk
+

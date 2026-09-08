@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-08
+
+### Added & Improved
+- **Menu Reordering & Direct Apply**:
+  - Reordered `ApplicationTop` so the 5 Ricoh presets appear at positions 1-5 for instant access.
+  - Enforced `ExecType="SET_VALUE"` to apply filters immediately without redundant submenus.
+- **Dynamic Text & Guide Hooks**:
+  - Implemented `getFilterName` and `getFilterGuide` hooks in `RicohHook` and `BaseMenuService` for dynamic in-camera title and guide text.
+- **UI & Layout Enhancements**:
+  - Default startup effect changed to `pop-color` (理光 GR 正片) in `PictureEffectPlusOptionMenuLayout`.
+  - Added null safety guards in `getLastStoredValues` and `setPreviousMenuID` to prevent potential NPE crashes.
+  - Added binary string pool patcher for `resources.arsc` to ensure "理光相机" system-wide display name consistency.
+  - Added key converter and S1 key handler compatibility patches.
+
 ## [1.0.0] - 2026-09-08
 
 ### Added

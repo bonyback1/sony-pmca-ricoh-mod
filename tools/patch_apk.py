@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 import argparse
 import re
+import struct
 
 # Import local tools
 from update_menu_data import update_menu_data
@@ -101,9 +102,580 @@ def patch_controller_smali(controller_path):
                 new_content = content.replace(term_str, 'invoke-static {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->onTerminateHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)V\n    ' + term_str, 1)
         content = new_content
 
+    # 5. Default backup effect to pop-color
+    content = content.replace('const-string v3, "part-color-plus"', 'const-string v3, "pop-color"')
+
     with open(controller_path, 'w', encoding='utf-8') as f:
         f.write(content)
     print("Successfully patched PictureEffectPlusController.smali")
+
+def patch_base_menu_service_smali(bms_path):
+    print(f"Patching {bms_path}...")
+    with open(bms_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # 1. Hook getMenuItemText
+    if "RicohHook;->getFilterName" not in content:
+        pat_text = r'(\.method public getMenuItemText\(Ljava/lang/String;\)Ljava/lang/CharSequence;[\s\S]*?\.prologue\s*)'
+        repl_text = r'''\1invoke-static {p1}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getFilterName(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v0
+
+    if-eqz v0, :cond_ricoh_name_skip
+
+    return-object v0
+
+    :cond_ricoh_name_skip
+    '''
+        content, c = re.subn(pat_text, repl_text, content, count=1)
+        if c > 0:
+            print("Successfully hooked getMenuItemText in BaseMenuService.smali")
+        else:
+            print("Warning: Could not hook getMenuItemText in BaseMenuService.smali")
+
+    # 2. Hook getMenuItemGuideText
+    if "RicohHook;->getFilterGuide" not in content:
+        pat_guide = r'(\.method public getMenuItemGuideText\(Ljava/lang/String;\)Ljava/lang/CharSequence;[\s\S]*?\.prologue\s*)'
+        repl_guide = r'''\1invoke-static {p1}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getFilterGuide(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v0
+
+    if-eqz v0, :cond_ricoh_guide_skip
+
+    return-object v0
+
+    :cond_ricoh_guide_skip
+    '''
+        content, c = re.subn(pat_guide, repl_guide, content, count=1)
+        if c > 0:
+            print("Successfully hooked getMenuItemGuideText in BaseMenuService.smali")
+        else:
+            print("Warning: Could not hook getMenuItemGuideText in BaseMenuService.smali")
+
+    with open(bms_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_option_menu_layout_smali(layout_path):
+    print(f"Patching {layout_path}...")
+    with open(layout_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # 1. Default effect to pop-color
+    content = content.replace('const-string v0, "part-color-plus"', 'const-string v0, "pop-color"')
+
+    # 2. Patch title to "理光相机"
+    title_target = 'iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mScreenTitle:Landroid/widget/TextView;\n\n    const v1, 0x7f090028\n\n    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(I)V'
+    title_repl = 'iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mScreenTitle:Landroid/widget/TextView;\n\n    const-string v1, "\\u7406\\u5149\\u76f8\\u673a"\n\n    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V'
+    if title_target in content:
+        content = content.replace(title_target, title_repl)
+        print("Successfully set mScreenTitle to '理光相机'")
+
+    # 3. Patch getLastStoredValues() to prevent NullPointerException
+    pat_glsv = r'\.method private getLastStoredValues\(\)V[\s\S]*?\.end method'
+    repl_glsv = '''.method private getLastStoredValues()V
+    .locals 3
+
+    .prologue
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->data:Landroid/os/Bundle;
+
+    if-eqz v1, :cond_ricoh_null
+
+    const-string v2, "MenuData"
+
+    invoke-virtual {v1, v2}, Landroid/os/Bundle;->getParcelable(Ljava/lang/String;)Landroid/os/Parcelable;
+
+    move-result-object v0
+
+    check-cast v0, Lcom/sony/imaging/app/base/menu/MenuDataParcelable;
+
+    if-nez v0, :cond_ricoh_chk
+
+    goto :cond_ricoh_null
+
+    :cond_ricoh_chk
+    const-string v1, "back"
+
+    invoke-virtual {v0}, Lcom/sony/imaging/app/base/menu/MenuDataParcelable;->getItemId()Ljava/lang/String;
+
+    move-result-object v2
+
+    invoke-virtual {v1, v2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v1
+
+    if-nez v1, :cond_0
+
+    :cond_ricoh_null
+    invoke-direct {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->setPreviousMenuID()V
+
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mController:Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;
+
+    invoke-virtual {v1}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getBackupEffectValue()Ljava/lang/String;
+
+    move-result-object v1
+
+    iput-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mPreviousSelectedeffect:Ljava/lang/String;
+
+    :cond_0
+    return-void
+.end method'''
+    content, c_glsv = re.subn(pat_glsv, repl_glsv, content, count=1)
+    if c_glsv > 0:
+        print("Successfully patched getLastStoredValues() with null safety")
+
+    # 4. Patch setPreviousMenuID() to guard null mLastItemId
+    pat_spmid = r'\.method private setPreviousMenuID\(\)V[\s\S]*?\.end method'
+    repl_spmid = '''.method private setPreviousMenuID()V
+    .locals 2
+
+    .prologue
+    iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mService:Lcom/sony/imaging/app/base/menu/BaseMenuService;
+
+    invoke-virtual {v0}, Lcom/sony/imaging/app/base/menu/BaseMenuService;->popMenuHistory()Lcom/sony/imaging/app/base/menu/HistoryItem;
+
+    move-result-object v0
+
+    iput-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mLastItemId:Lcom/sony/imaging/app/base/menu/HistoryItem;
+
+    if-eqz v0, :cond_ricoh_skip_push
+
+    iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mService:Lcom/sony/imaging/app/base/menu/BaseMenuService;
+
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mLastItemId:Lcom/sony/imaging/app/base/menu/HistoryItem;
+
+    invoke-virtual {v0, v1}, Lcom/sony/imaging/app/base/menu/BaseMenuService;->pushMenuHistory(Lcom/sony/imaging/app/base/menu/HistoryItem;)V
+
+    :cond_ricoh_skip_push
+    return-void
+.end method'''
+    content, c_spmid = re.subn(pat_spmid, repl_spmid, content, count=1)
+    if c_spmid > 0:
+        print("Successfully patched setPreviousMenuID() with null check")
+
+    # 5. Patch pushedMenuKey() to call closeLayout() when mLastItemId is null
+    menu_exit_target = """    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->getActivity()Landroid/app/Activity;
+
+    move-result-object v1
+
+    invoke-virtual {v1}, Landroid/app/Activity;->finish()V"""
+    menu_exit_repl = """    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->closeLayout()V"""
+    if menu_exit_target in content:
+        content = content.replace(menu_exit_target, menu_exit_repl)
+        print("Successfully patched pushedMenuKey() to closeLayout() back to shooting")
+
+    # 6. Patch pushedRightKey() and pushedLeftKey()
+    pat_right = r'\.method public pushedRightKey\(\)I[\s\S]*?\.end method'
+    repl_right = '''.method public pushedRightKey()I
+    .locals 1
+
+    .prologue
+    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->pushedDownKey()I
+
+    move-result v0
+
+    return v0
+.end method'''
+    content, c_right = re.subn(pat_right, repl_right, content, count=1)
+    if c_right > 0:
+        print("Successfully mapped pushedRightKey() to pushedDownKey() (move next)")
+
+    pat_left = r'\.method public pushedLeftKey\(\)I[\s\S]*?\.end method'
+    repl_left = '''.method public pushedLeftKey()I
+    .locals 1
+
+    .prologue
+    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->pushedUpKey()I
+
+    move-result v0
+
+    return v0
+.end method'''
+    content, c_left = re.subn(pat_left, repl_left, content, count=1)
+    if c_left > 0:
+        print("Successfully mapped pushedLeftKey() to pushedUpKey() (move prev)")
+
+    # 7. Add turnedMainDialNext() and turnedMainDialPrev()
+    if "turnedMainDialNext()I" not in content:
+        main_dial_methods = '''
+.method public turnedMainDialNext()I
+    .locals 1
+
+    .prologue
+    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->pushedDownKey()I
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public turnedMainDialPrev()I
+    .locals 1
+
+    .prologue
+    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->pushedUpKey()I
+
+    move-result v0
+
+    return v0
+.end method
+'''
+        content += main_dial_methods
+        print("Successfully added turnedMainDialNext() and turnedMainDialPrev()")
+
+    # 8. Patch turnedSubDialNext() and turnedSubDialPrev() to directly call pushedDownKey() and pushedUpKey()
+    pat_sub_next = r'(\.method public turnedSubDialNext\(\)I[\s\S]*?)invoke-super \{p0\}, Lcom/sony/imaging/app/base/menu/layout/SpecialScreenMenuLayout;->turnedMainDialNext\(\)I'
+    repl_sub_next = r'\1invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->pushedDownKey()I'
+    content, c_snext = re.subn(pat_sub_next, repl_sub_next, content, count=1)
+    if c_snext > 0:
+        print("Successfully mapped turnedSubDialNext() to pushedDownKey() (move next)")
+
+    pat_sub_prev = r'(\.method public turnedSubDialPrev\(\)I[\s\S]*?)invoke-super \{p0\}, Lcom/sony/imaging/app/base/menu/layout/SpecialScreenMenuLayout;->turnedMainDialPrev\(\)I'
+    repl_sub_prev = r'\1invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->pushedUpKey()I'
+    content, c_sprev = re.subn(pat_sub_prev, repl_sub_prev, content, count=1)
+    if c_sprev > 0:
+        print("Successfully mapped turnedSubDialPrev() to pushedUpKey() (move prev)")
+
+    with open(layout_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_app_root_smali(app_root_path):
+    print(f"Patching {app_root_path}...")
+    with open(app_root_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # 1. Patch finish(Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;)V
+    pat_finish = r'\.method public finish\(Lcom/sony/imaging/app/fw/AppRoot\$FINISH_TYPE;\)V[\s\S]*?\.end method'
+    repl_finish = '''.method public finish(Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;)V
+    .locals 2
+    .param p1, "type"    # Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;
+
+    .prologue
+    const-string v1, "DLApp Shutdown"
+
+    invoke-static {v1}, Lcom/sony/imaging/app/util/PTag;->start(Ljava/lang/String;)V
+
+    :try_start_dacm
+    new-instance v0, Landroid/app/DAConnectionManager;
+
+    invoke-direct {v0, p0}, Landroid/app/DAConnectionManager;-><init>(Landroid/content/Context;)V
+
+    invoke-virtual {v0}, Landroid/app/DAConnectionManager;->finish()V
+    :try_end_dacm
+    .catch Ljava/lang/Throwable; {:try_start_dacm .. :try_end_dacm} :catch_dacm
+
+    :catch_dacm
+    invoke-super {p0}, Landroid/app/Activity;->finish()V
+
+    const/4 v1, 0x3
+
+    invoke-static {v1}, Lcom/sony/imaging/app/fw/RunStatus;->setStatus(I)V
+
+    return-void
+.end method'''
+    content, c1 = re.subn(pat_finish, repl_finish, content, count=1)
+    if c1 > 0:
+        print("Successfully patched finish() in AppRoot.smali")
+    else:
+        print("Warning: Could not patch finish() in AppRoot.smali")
+
+    # 2. Patch onDestroy() - Clean onDestroy, reset RunStatus to FINISHED (5), NO killProcess/System.exit!
+    pat_dest = r'\.method protected final onDestroy\(\)V[\s\S]*?invoke-super \{p0\}, Landroid/app/Activity;->onDestroy\(\)V[\s\S]*?\.end method'
+    repl_dest = '''.method protected final onDestroy()V
+    .locals 1
+
+    .prologue
+    invoke-super {p0}, Landroid/app/Activity;->onDestroy()V
+
+    const/4 v0, 0x5
+
+    invoke-static {v0}, Lcom/sony/imaging/app/fw/RunStatus;->setStatus(I)V
+
+    return-void
+.end method'''
+    content, c2 = re.subn(pat_dest, repl_dest, content, count=1)
+    if c2 > 0:
+        print("Successfully patched onDestroy() in AppRoot.smali (clean return)")
+    else:
+        print("Warning: Could not patch onDestroy() in AppRoot.smali")
+
+    # 3. Patch onResume() to prevent DLApp Boot from Resume loop if finishing
+    pat_resume = r'(\.method protected onResume\(\)V[\s\S]*?\.prologue\s*)'
+    repl_resume = r'''\1invoke-virtual {p0}, Lcom/sony/imaging/app/fw/AppRoot;->isFinishing()Z
+
+    move-result v0
+
+    if-eqz v0, :cond_ricoh_not_finishing
+
+    invoke-super {p0}, Landroid/app/Activity;->finish()V
+
+    return-void
+
+    :cond_ricoh_not_finishing
+    invoke-static {}, Lcom/sony/imaging/app/fw/RunStatus;->getStatus()I
+
+    move-result v0
+
+    const/4 v1, 0x3
+
+    if-ne v0, v1, :cond_ricoh_not_status_finishing
+
+    invoke-super {p0}, Landroid/app/Activity;->finish()V
+
+    return-void
+
+    :cond_ricoh_not_status_finishing
+    '''
+    if "isFinishing" not in content:
+        content, c3 = re.subn(pat_resume, repl_resume, content, count=1)
+        if c3 > 0:
+            print("Successfully injected exit guard in onResume() in AppRoot.smali")
+        else:
+            print("Warning: Could not inject exit guard in onResume() in AppRoot.smali")
+    else:
+        content = content.replace('if-lt v0, v1', 'if-ne v0, v1')
+
+    with open(app_root_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_key_handler_smali(key_handler_path):
+    print(f"Patching {key_handler_path}...")
+    smali_code = '''.class public Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;
+.super Lcom/sony/imaging/app/base/shooting/trigger/S1OffEEStateKeyHandler;
+.source "PictureEffectPlusS1OffEEStateKeyHandler.java"
+
+# static fields
+.field private static final ITEM_ID:Ljava/lang/String; = "ItemId"
+
+.field protected static final STRBUILD:Ljava/lang/StringBuilder;
+
+.field private static final TAG:Ljava/lang/String; = "PictureEffectPlusS1OffEEStateKeyHandler"
+
+# instance fields
+.field protected FUNC_NAME:Ljava/lang/String;
+
+# direct methods
+.method static constructor <clinit>()V
+    .locals 1
+
+    new-instance v0, Ljava/lang/StringBuilder;
+
+    invoke-direct {v0}, Ljava/lang/StringBuilder;-><init>()V
+
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->STRBUILD:Ljava/lang/StringBuilder;
+
+    return-void
+.end method
+
+.method public constructor <init>()V
+    .locals 1
+
+    invoke-direct {p0}, Lcom/sony/imaging/app/base/shooting/trigger/S1OffEEStateKeyHandler;-><init>()V
+
+    const-string v0, ""
+
+    iput-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->FUNC_NAME:Ljava/lang/String;
+
+    return-void
+.end method
+
+# virtual methods
+.method public pushedCenterKey()I
+    .locals 6
+
+    .prologue
+    const/4 v5, 0x1
+
+    invoke-static {v5}, Lcom/sony/imaging/app/pictureeffectplus/shooting/PictureEffectEEState;->setIsMenuStateAdd(Z)V
+
+    new-instance v0, Landroid/os/Bundle;
+
+    invoke-direct {v0}, Landroid/os/Bundle;-><init>()V
+
+    const-string v1, "ItemId"
+
+    const-string v2, "ApplicationTop"
+
+    invoke-virtual {v0, v1, v2}, Landroid/os/Bundle;->putString(Ljava/lang/String;Ljava/lang/String;)V
+
+    const-string v1, "MenuLayoutId"
+
+    const-string v2, "ID_PICTUREEFFECTPLUSOPTIONMENULAYOUT"
+
+    invoke-virtual {v0, v1, v2}, Landroid/os/Bundle;->putString(Ljava/lang/String;Ljava/lang/String;)V
+
+    invoke-virtual {p0, v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->openMenu(Landroid/os/Bundle;)V
+
+    const-string v1, "pushedCenterKey"
+
+    iput-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->FUNC_NAME:Ljava/lang/String;
+
+    return v5
+.end method
+
+.method public pushedEnter5WayFuncKey()I
+    .locals 1
+
+    .prologue
+    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->pushedCenterKey()I
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public pushedEnterJoyStickFuncKey()I
+    .locals 1
+
+    .prologue
+    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->pushedCenterKey()I
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public pushedCustomKey()I
+    .locals 1
+
+    .prologue
+    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->pushedCenterKey()I
+
+    move-result v0
+
+    return v0
+.end method
+'''
+    with open(key_handler_path, 'w', encoding='utf-8') as f:
+        f.write(smali_code)
+    print("Successfully patched PictureEffectPlusS1OffEEStateKeyHandler.smali")
+
+def patch_key_converter_smali(key_converter_path):
+    print(f"Patching {key_converter_path}...")
+    with open(key_converter_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    target = 'iget-object v11, p0, Lcom/sony/imaging/app/fw/KeyConverter;->mCustomKeyMgr:Lcom/sony/imaging/app/fw/ICustomKeyMgr;'
+    repl = '''const/16 v11, 0xe8
+
+    if-ne v2, v11, :cond_ricoh_not_center
+
+    const/4 v7, 0x0
+
+    sget-object v5, Lcom/sony/imaging/app/fw/CustomizableFunction;->Unchanged:Lcom/sony/imaging/app/fw/CustomizableFunction;
+
+    goto :cond_2
+
+    :cond_ricoh_not_center
+    iget-object v11, p0, Lcom/sony/imaging/app/fw/KeyConverter;->mCustomKeyMgr:Lcom/sony/imaging/app/fw/ICustomKeyMgr;'''
+
+    if target in content:
+        content = content.replace(target, repl, 1)
+        print("Successfully patched KeyConverter.smali: scanCode 0xe8 (Center Button) bypasses custom key intercept -> pushedCenterKey()")
+    else:
+        print("Warning: target iget-object mCustomKeyMgr not found in KeyConverter.smali")
+
+    with open(key_converter_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_resources_arsc(arsc_path):
+    print(f"Patching {arsc_path}...")
+    with open(arsc_path, 'rb') as f:
+        data = bytearray(f.read())
+
+    res_type, header_size, file_size, pkg_cnt = struct.unpack('<HHII', data[:12])
+    sp_offset = header_size
+    sp_type, sp_hdr_size, sp_chunk_size, str_cnt, sty_cnt, flags, str_start, sty_start = struct.unpack('<HHIIIIII', data[sp_offset:sp_offset+28])
+    offsets = struct.unpack(f'<{str_cnt}I', data[sp_offset+28 : sp_offset+28+4*str_cnt])
+    strings_data_start = sp_offset + str_start
+
+    strings = []
+    for idx in range(str_cnt):
+        s_ptr = strings_data_start + offsets[idx]
+        u16len = data[s_ptr]
+        s_ptr += 1
+        if u16len & 0x80:
+            u16len = ((u16len & 0x7f) << 8) | data[s_ptr]
+            s_ptr += 1
+        u8len = data[s_ptr]
+        s_ptr += 1
+        if u8len & 0x80:
+            u8len = ((u8len & 0x7f) << 8) | data[s_ptr]
+            s_ptr += 1
+        s_bytes = data[s_ptr : s_ptr + u8len]
+        strings.append(s_bytes.decode('utf-8', errors='replace'))
+
+    target_names = {
+        'Picture Effect+', 'Picture\nEffect+', '照片效果+', '照片\n效果+',
+        '相片效果+', '相片\n效果+', 'ピクチャーエフェクト＋', 'ピクチャー\nエフェクト＋',
+        'Эффект\nрисунка+', 'Foto\nefekat+', 'جلوه تصویر+', 'Kép effektus+',
+        'Kesan\nGambar+', 'Εφέ φωτογραφ.+', 'Effet photo+', 'Efeito Foto+',
+        'Kuvateh.+', 'Effet de\nphoto+', 'Efek Gambar+', 'Efekt\nwizualny+',
+        'Efeito\nFoto+', 'Resim\nEfekti+', 'เอฟเฟ็คของภาพ+', 'Effetto\nimmagine+',
+        'Kesan Gambar+', 'Hiệu ứng Hình ảnh+', 'Efect\nimagine+', 'Obrazový\nefekt+',
+        '사진 효과+', 'เอฟเฟ็ค\nของภาพ+', 'Resim Efekti+', 'Эффект рисунка+',
+        'Ефект малюнка+', 'Obrazový efekt+', 'تأثير الصورة+', 'Bildeeffekt+',
+        'Bildeffekt+', 'Foto efekat+', 'Billedeffekt+', 'Efeito de Imagem+',
+        'Εφέ\nφωτογραφ.+', 'Billed-\neffekt+', 'Фотоефект+', 'Efecto de\nfoto+',
+        'Ефект\nмалюнка+', 'Foto-effect+', 'Efeito de\nImagem+', 'Efekt wizualny+',
+        'Effetto immagine+', 'Bilde-\neffekt+', 'Hiệu ứng\nHình ảnh+', 'Efect imagine+',
+        'Effet de photo+', 'Efecto de foto+'
+    }
+
+    replaced_count = 0
+    for idx in range(len(strings)):
+        if strings[idx] in target_names:
+            strings[idx] = '理光相机'
+            replaced_count += 1
+
+    print(f"Replaced {replaced_count} localized app titles in resources.arsc with '理光相机'")
+
+    def encode_str(s):
+        u8 = s.encode('utf-8')
+        u16_len = len(s)
+        u8_len = len(u8)
+        buf = bytearray()
+        if u16_len > 0x7f:
+            buf.append((u16_len >> 8) | 0x80)
+            buf.append(u16_len & 0xff)
+        else:
+            buf.append(u16_len)
+        if u8_len > 0x7f:
+            buf.append((u8_len >> 8) | 0x80)
+            buf.append(u8_len & 0xff)
+        else:
+            buf.append(u8_len)
+        buf.extend(u8)
+        buf.append(0)
+        return bytes(buf)
+
+    repacked_str_data = bytearray()
+    repacked_offsets = []
+    for s in strings:
+        repacked_offsets.append(len(repacked_str_data))
+        repacked_str_data.extend(encode_str(s))
+
+    while len(repacked_str_data) % 4 != 0:
+        repacked_str_data.append(0)
+
+    new_sp_chunk_size = str_start + len(repacked_str_data)
+    diff = new_sp_chunk_size - sp_chunk_size
+
+    new_offsets_bytes = struct.pack(f'<{str_cnt}I', *repacked_offsets)
+    new_sp_chunk = bytearray()
+    new_sp_chunk.extend(struct.pack('<HHIIIIII', sp_type, sp_hdr_size, new_sp_chunk_size, str_cnt, sty_cnt, flags, str_start, sty_start))
+    new_sp_chunk.extend(new_offsets_bytes)
+    while len(new_sp_chunk) < str_start:
+        new_sp_chunk.append(0)
+    new_sp_chunk.extend(repacked_str_data)
+
+    rest_of_data = data[sp_offset + sp_chunk_size:]
+    new_file_size = file_size + diff
+    new_header = struct.pack('<HHII', res_type, header_size, new_file_size, pkg_cnt)
+
+    final_data = new_header + new_sp_chunk + rest_of_data
+    with open(arsc_path, 'wb') as f:
+        f.write(final_data)
+    print("Successfully patched resources.arsc string pool!")
 
 def patch_app_name_smali(app_smali_path):
     print(f"Patching {app_smali_path}...")
@@ -151,31 +723,67 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         shutil.copyfile(SRC_SMALI, os.path.join(target_hook_dir, 'RicohHook.smali'))
 
         # Step 3: Patch Smali
-        print("==> [3/6] Patching Smali controller and launcher ...")
+        print("==> [3/7] Patching Smali controller, menu service, layout, key handlers, and AppRoot ...")
         ctrl_smali = os.path.join(target_hook_dir, 'PictureEffectPlusController.smali')
         if not os.path.exists(ctrl_smali):
             raise FileNotFoundError(f"Controller smali not found at {ctrl_smali}")
         patch_controller_smali(ctrl_smali)
 
+        bms_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'base', 'menu', 'BaseMenuService.smali')
+        if os.path.exists(bms_smali):
+            patch_base_menu_service_smali(bms_smali)
+        else:
+            print("Warning: BaseMenuService.smali not found, skipping menu service patch.")
+
+        layout_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'layout', 'PictureEffectPlusOptionMenuLayout.smali')
+        if os.path.exists(layout_smali):
+            patch_option_menu_layout_smali(layout_smali)
+
         app_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'PictureEffectPlus.smali')
         if os.path.exists(app_smali):
             patch_app_name_smali(app_smali)
 
+        app_root_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'fw', 'AppRoot.smali')
+        if os.path.exists(app_root_smali):
+            patch_app_root_smali(app_root_smali)
+        else:
+            print("Warning: AppRoot.smali not found, skipping AppRoot patch.")
+
+        key_handler_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'trigger', 'PictureEffectPlusS1OffEEStateKeyHandler.smali')
+        if os.path.exists(key_handler_smali):
+            patch_key_handler_smali(key_handler_smali)
+        else:
+            print("Warning: PictureEffectPlusS1OffEEStateKeyHandler.smali not found, skipping key handler patch.")
+
+        key_converter_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'fw', 'KeyConverter.smali')
+        if os.path.exists(key_converter_smali):
+            patch_key_converter_smali(key_converter_smali)
+        else:
+            print("Warning: KeyConverter.smali not found, skipping key converter patch.")
+
         # Step 4: Update MenuData.xml
-        print("==> [4/6] Updating filter names in MenuData.xml ...")
+        print("==> [4/7] Updating filter names in MenuData.xml ...")
         menu_xml = os.path.join(work_dir, 'assets', 'MenuData.xml')
         if os.path.exists(menu_xml):
             update_menu_data(menu_xml)
         else:
             print("Warning: assets/MenuData.xml not found, skipping menu update.")
 
-        # Step 5: Rebuild APK
-        print("==> [5/6] Rebuilding APK with apktool ...")
+        # Step 5: Patch resources.arsc string pool
+        print("==> [5/7] Patching resources.arsc string pool for app display name ...")
+        arsc_file = os.path.join(work_dir, 'resources.arsc')
+        if os.path.exists(arsc_file):
+            patch_resources_arsc(arsc_file)
+        else:
+            print("Warning: resources.arsc not found, skipping arsc patch.")
+
+        # Step 6: Rebuild APK
+        print("==> [6/7] Rebuilding APK with apktool ...")
         unsigned_apk = os.path.join(work_dir, 'unsigned.apk')
         run_cmd(['apktool', 'b', work_dir, '-o', unsigned_apk])
 
-        # Step 6: Sign APK
-        print(f"==> [6/6] Signing APK -> {output_apk} ...")
+        # Step 7: Sign APK
+        print(f"==> [7/7] Signing APK -> {output_apk} ...")
         sign_apk(unsigned_apk, output_apk, pem_path=custom_key)
 
         print("\n" + "=" * 60)

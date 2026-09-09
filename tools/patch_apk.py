@@ -413,9 +413,94 @@ def patch_ee_state_smali(ee_state_path):
         f.write(content)
 
 def patch_app_root_smali(app_root_path):
-    # Official Sony AppRoot already has clean DAConnectionManager lifecycle.
-    # No modifications needed.
-    pass
+    print(f"Patching {app_root_path}...")
+    with open(app_root_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # 1. Patch finish(Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;)V
+    pat_finish = r'\.method public finish\(Lcom/sony/imaging/app/fw/AppRoot\$FINISH_TYPE;\)V[\s\S]*?\.end method'
+    repl_finish = '''.method public finish(Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;)V
+    .locals 7
+    .param p1, "type"    # Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;
+
+    .prologue
+    const-string v1, "DLApp Shutdown"
+
+    invoke-static {v1}, Lcom/sony/imaging/app/util/PTag;->start(Ljava/lang/String;)V
+
+    :try_start_0
+    const/4 v0, 0x0
+
+    new-array v5, v0, [Ljava/lang/String;
+
+    new-array v6, v0, [Ljava/lang/String;
+
+    const-string v3, ""
+
+    const-string v4, ""
+
+    const-string v1, "com.sony.scalar.dlsys.scalaralauncher"
+
+    const-string v2, "com.sony.scalar.dlsys.scalaralauncher.ScalarALauncher"
+
+    move-object v0, p0
+
+    invoke-static/range {v0 .. v6}, Lcom/sony/imaging/app/util/AppInfo;->notifyAppInfo(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)V
+
+    new-instance v0, Landroid/app/DAConnectionManager;
+
+    invoke-direct {v0, p0}, Landroid/app/DAConnectionManager;-><init>(Landroid/content/Context;)V
+
+    invoke-virtual {v0}, Landroid/app/DAConnectionManager;->finish()V
+    :try_end_0
+    .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_0} :catch_0
+
+    :goto_0
+    invoke-super {p0}, Landroid/app/Activity;->finish()V
+
+    const/4 v1, 0x3
+
+    invoke-static {v1}, Lcom/sony/imaging/app/fw/RunStatus;->setStatus(I)V
+
+    return-void
+
+    :catch_0
+    move-exception v0
+
+    goto :goto_0
+.end method'''
+
+    new_content, c1 = re.subn(pat_finish, repl_finish, content, count=1)
+    if c1 > 0:
+        print("Successfully patched AppRoot.finish(FINISH_TYPE) with clean DACM exit & Activity.finish()")
+    else:
+        print("Warning: Could not patch AppRoot.finish(FINISH_TYPE)")
+
+    # 2. Patch onDestroy()V
+    pat_destroy = r'\.method protected final onDestroy\(\)V[\s\S]*?\.end method'
+    repl_destroy = '''.method protected final onDestroy()V
+    .locals 1
+
+    .prologue
+    invoke-super {p0}, Landroid/app/Activity;->onDestroy()V
+
+    invoke-static {}, Landroid/os/Process;->myPid()I
+
+    move-result v0
+
+    invoke-static {v0}, Landroid/os/Process;->killProcess(I)V
+
+    return-void
+.end method'''
+
+    new_content, c2 = re.subn(pat_destroy, repl_destroy, new_content, count=1)
+    if c2 > 0:
+        print("Successfully patched AppRoot.onDestroy() with process kill")
+    else:
+        print("Warning: Could not patch AppRoot.onDestroy()")
+
+    with open(app_root_path, 'w', encoding='utf-8') as f:
+        f.write(new_content)
 
 def patch_key_handler_smali(key_handler_path):
     print(f"Patching {key_handler_path}...")

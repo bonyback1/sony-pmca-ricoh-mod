@@ -15,23 +15,22 @@ import argparse
 REPO = "bonyback1/sony-pmca-ricoh-mod"
 API_URL = f"https://api.github.com/repos/{REPO}/releases"
 
-DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.1.1 (B1.1) 发布
+DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.1.2 (B1.2) 发布
 
-本版本修复了相机启动时未能默认停留在第 1 个滤镜的问题，并优化了按键交互与系统退出逻辑。已在索尼 ILCE-6300 真机上测试通过。
+本版本彻底修复了退出应用程序时反复重新唤醒进入应用的死循环 Bug，并规范了 PMCA 与 Android Activity 混合生命周期。已在索尼 ILCE-6300 真机上测试通过。
 
 #### 🌟 核心更新与修复
-- **默认首选滤镜修复 (理光 GR 正片)**：
-  - 修复了机身 Flash 存储残留旧滤镜值（`part-color-plus`，排在第 5 项）导致启动时游标偏离的问题。
-  - 在 `PictureEffectPlusController` 中加入合法性校验，检测到非法或残留值自动回退为 `pop-color` 并刷新 Flash。
-  - 在冷启动生命周期（`BootFactor.LUNCHER`）中显式复位当前滤镜为 `pop-color`，保证打开应用时 100% 默认定位在第 1 项「理光 GR 正片」。
-  - 休眠唤醒（`BootFactor.POWERON`）时保持当前正在使用的滤镜，不破坏取景连续性。
-- **按键快速切换与按键转换优化**：
-  - 拦截中央确认键（扫描码 `0xe8`），跳过系统对焦自定义键拦截，保证取景状态下一键唤出滤镜选择。
-  - 顶波轮（SubDial）、后拨轮（MainDial）及左右方向键统一支持滤镜前后顺畅切换。
-- **退出防重复唤醒修复**：
-  - 规范 Activity 退出生命周期，杜绝强杀进程触发的 AMS 崩溃恢复重启死循环。
-- **全系统名称统一**：
-  - 54 处语言资源与界面标题统一显示为「理光相机」。
+- **彻底修复退出应用反复重新唤醒 Bug (Exit Loop Fix)**：
+  - 深度分析索尼私有 `DAConnectionManagerService` 与 JNI 唤醒机制：此前退出时由于未清空 `resume_key` 与 `pullingback_key`，系统在切换到原生拍摄（diadem）或检测到硬件按键时，会根据 `/data/resume_info.txt` 中残留的包名信息强制重新拉起 `PictureEffectPlus`。
+  - 在 `AppRoot.finish(FINISH_TYPE)` 中注入状态复位广播：退出时先向系统发送 `AppInfoReceive`，将当前激活应用显式复位为系统桌面 `ScalarALauncher` 并清空唤醒按键数组，彻底消除系统的重唤醒来源。
+  - 修复 `AppRoot.finish` 未调用 `Activity.finish()` 的缺陷：在调用 `dacm.finish()` 的同时显式调用 `super.finish()`，确保 Activity 真正从 ActivityManager 任务栈中出栈并销毁，避免以 `PAUSED` 状态悬挂在后台。
+  - 在 `AppRoot.onDestroy()` 中加入进程安全回收机制，确保退出后内存与相机 HAL 资源完全释放。
+  - 完美保留正常拍摄时的关机/开机休眠唤醒特性（关机再开机依旧停留在当前滤镜）。
+- **默认首选滤镜 (理光 GR 正片)**：
+  - 启动应用 100% 默认定位在第 1 项「理光 GR 正片」。
+- **按键快速切换与全系统名称统一**：
+  - 中央确认键（扫描码 `0xe8`）直通滤镜选择，拨轮与方向键均可顺畅切换滤镜。
+  - 54 处系统语言资源与界面标题统一显示为「理光相机」。
 
 #### 📦 附件说明
 - `PictureEffectPlus_Ricoh.apk`：已签名并验证通过的正式安装包（集成 Android 4.1.2 兼容的 v1/v2/v3 签名）。
@@ -42,7 +41,7 @@ DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod)
 ```
 """
 
-def publish_release(token, tag="v1.1.1", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v1.1.2", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 
@@ -52,7 +51,7 @@ def publish_release(token, tag="v1.1.1", apk_path="PictureEffectPlus_Ricoh.apk",
         "User-Agent": "Sony-PMCA-Publisher"
     }
 
-    title = title or f"{tag} (B1.1) - 默认首选滤镜修复与稳定性增强"
+    title = title or f"{tag} (B1.2) - 退出死循环彻底修复与生命周期规范化"
     body = body or DEFAULT_BODY
 
     # 1. Check if release already exists for this tag

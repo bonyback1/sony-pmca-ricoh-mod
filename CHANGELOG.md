@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-09-09 (B1.2)
+
+### Fixed & Enhanced
+- **Clean Exit & Lifecycle Management (Fix Exit Loop / Re-entry Bug)**:
+  - Fixed root cause where clicking "退出应用程序" (Exit application) caused the app to repeatedly restart or bounce back into the app instead of returning cleanly to native camera shooting mode or app launcher.
+  - Injected resume information reset in `AppRoot.finish(FINISH_TYPE)`: sends broadcast resetting active application to `ScalarALauncher` and clearing `resume_key` and `pullingback_key`, ensuring `DAConnectionManagerService` will not resurrect `PictureEffectPlus` upon hardware/sensor state transitions.
+  - Injected `Activity.finish()` in `AppRoot.finish(FINISH_TYPE)` so the Android Activity is cleanly finished and destroyed by ActivityManagerService instead of lingering in the task stack as `PAUSED`.
+  - Injected `android.os.Process.killProcess(Process.myPid())` in `AppRoot.onDestroy()` for clean termination and memory reclamation.
+  - Preserved power switch sleep/wake resume behavior while shooting (powering off and on while shooting still stays in the app).
+
 ## [1.1.1] - 2026-09-09 (B1.1)
 
 ### Fixed & Enhanced

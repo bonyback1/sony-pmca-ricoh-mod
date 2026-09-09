@@ -15,33 +15,34 @@ import argparse
 REPO = "bonyback1/sony-pmca-ricoh-mod"
 API_URL = f"https://api.github.com/repos/{REPO}/releases"
 
-DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.0.0 初版发布
+DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.1.1 (B1.1) 发布
 
-已在索尼 ILCE-6300（固件 v2.01 / Android 4.1.2）真机上成功安装并运行，硬件 ISP 色彩管线及 UI 拟物表盘均运行完美。
+本版本修复了相机启动时未能默认停留在第 1 个滤镜的问题，并优化了按键交互与系统退出逻辑。已在索尼 ILCE-6300 真机上测试通过。
 
-#### 🌟 核心特性
-- **纯硬件 ISP 实时管线**：直接写入相机底层硬件寄存器，零延迟取景、支持原生高速连拍。
-- **5 款理光胶片滤镜**：
-  1. 理光 GR 正片 (Ricoh Positive Film)
-  2. 理光负片 (Ricoh Negative Film)
-  3. 高对比黑白 (Ricoh High Contrast B&W)
-  4. 森山大道风 (Moriyama Daido Style)
-  5. 正负逆冲 (Ricoh Cross Process)
-- **防偏色复位机制**：切换与退出时自动恢复单位矩阵与默认 Gamma。
+#### 🌟 核心更新与修复
+- **默认首选滤镜修复 (理光 GR 正片)**：
+  - 修复了机身 Flash 存储残留旧滤镜值（`part-color-plus`，排在第 5 项）导致启动时游标偏离的问题。
+  - 在 `PictureEffectPlusController` 中加入合法性校验，检测到非法或残留值自动回退为 `pop-color` 并刷新 Flash。
+  - 在冷启动生命周期（`BootFactor.LUNCHER`）中显式复位当前滤镜为 `pop-color`，保证打开应用时 100% 默认定位在第 1 项「理光 GR 正片」。
+  - 休眠唤醒（`BootFactor.POWERON`）时保持当前正在使用的滤镜，不破坏取景连续性。
+- **按键快速切换与按键转换优化**：
+  - 拦截中央确认键（扫描码 `0xe8`），跳过系统对焦自定义键拦截，保证取景状态下一键唤出滤镜选择。
+  - 顶波轮（SubDial）、后拨轮（MainDial）及左右方向键统一支持滤镜前后顺畅切换。
+- **退出防重复唤醒修复**：
+  - 规范 Activity 退出生命周期，杜绝强杀进程触发的 AMS 崩溃恢复重启死循环。
+- **全系统名称统一**：
+  - 54 处语言资源与界面标题统一显示为「理光相机」。
 
-#### 📷 支持机型
-- A6000, A6300, A6500
-- A7, A7R, A7S, A7M2, A7R2, A7S2
-- RX100 M3/M4/M5, RX10 M2/M3, RX1R II 等 PMCA 架构机型。
+#### 📦 附件说明
+- `PictureEffectPlus_Ricoh.apk`：已签名并验证通过的正式安装包（集成 Android 4.1.2 兼容的 v1/v2/v3 签名）。
 
-#### 📦 安装方式
-下载附件中的 `PictureEffectPlus_Ricoh.apk`，通过 Wi-Fi ADB 安装：
+#### 🚀 安装方式
 ```bash
 ./scripts/install.sh <相机IP> PictureEffectPlus_Ricoh.apk
 ```
 """
 
-def publish_release(token, tag="v1.0.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v1.1.1", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 
@@ -51,7 +52,7 @@ def publish_release(token, tag="v1.0.0", apk_path="PictureEffectPlus_Ricoh.apk",
         "User-Agent": "Sony-PMCA-Publisher"
     }
 
-    title = title or f"{tag} - 初版发布：理光 5 大经典胶片滤镜（适配 A6300/A6000 等）"
+    title = title or f"{tag} (B1.1) - 默认首选滤镜修复与稳定性增强"
     body = body or DEFAULT_BODY
 
     # 1. Check if release already exists for this tag
@@ -117,7 +118,7 @@ def publish_release(token, tag="v1.0.0", apk_path="PictureEffectPlus_Ricoh.apk",
 def main():
     parser = argparse.ArgumentParser(description="Publish Release to GitHub")
     parser.add_argument('-t', '--token', default=os.environ.get('GITHUB_TOKEN'), help="GitHub Personal Access Token")
-    parser.add_argument('--tag', default="v1.0.0", help="Release tag (default: v1.0.0)")
+    parser.add_argument('--tag', default="v1.1.1", help="Release tag (default: v1.1.1)")
     parser.add_argument('--apk', default="PictureEffectPlus_Ricoh.apk", help="Path to APK binary")
     args = parser.parse_args()
 

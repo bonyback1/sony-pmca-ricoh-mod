@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-09-09 (B1.1)
+
+### Fixed & Enhanced
+- **Default Startup Filter (理光 GR 正片)**:
+  - Fixed an issue where the app stayed on a later legacy filter (`part-color-plus` at index 5) due to stale camera flash storage.
+  - Added preset validation in `PictureEffectPlusController.getBackupEffectValue`: non-Ricoh or legacy values automatically fallback to `pop-color` (理光 GR 正片) and repair flash storage.
+  - Injected cold boot reset in `PictureEffectPlus.onBoot` (`BootFactor.LUNCHER`): launching the app from the camera application list now unconditionally defaults to the first filter (理光 GR 正片, index 0).
+  - Preserved active shooting filters across camera sleep/power cycling (`BootFactor.POWERON` / `BootFactor.APO`).
+- **Key & Navigation Compatibility**:
+  - Center button keycode `0xe8` bypasses custom key mapping interception to ensure reliable menu triggering and filter selection.
+  - Directional keys (Left/Right) and sub-dial turns mapped to Up/Down for swift filter switching.
+- **Build & Packaging**:
+  - Integrated `uber-apk-signer` for dual v1/v2/v3 signing compatible with Android 4.1.2.
+
 ## [1.1.0] - 2026-09-08
 
 ### Added & Improved

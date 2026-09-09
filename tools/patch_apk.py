@@ -102,8 +102,44 @@ def patch_controller_smali(controller_path):
                 new_content = content.replace(term_str, 'invoke-static {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->onTerminateHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)V\n    ' + term_str, 1)
         content = new_content
 
-    # 5. Default backup effect to pop-color
-    content = content.replace('const-string v3, "part-color-plus"', 'const-string v3, "pop-color"')
+    # 5. Default backup effect to pop-color and validate in getBackupEffectValue
+    target_backup = """    const-string v2, "ID_PICTUREEFFECTPLUS_CURRENT_EFFECT"
+
+    const-string v3, "part-color-plus"
+
+    invoke-virtual {v1, v2, v3}, Lcom/sony/imaging/app/util/BackUpUtil;->getPreferenceString(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v0"""
+
+    repl_backup = """    const-string v2, "ID_PICTUREEFFECTPLUS_CURRENT_EFFECT"
+
+    const-string v3, "pop-color"
+
+    invoke-virtual {v1, v2, v3}, Lcom/sony/imaging/app/util/BackUpUtil;->getPreferenceString(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v0
+
+    invoke-static {v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getRGBMatrix(Ljava/lang/String;)[I
+
+    move-result-object v1
+
+    if-nez v1, :cond_ricoh_preset_ok
+
+    const-string v0, "pop-color"
+
+    sget-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->mBackupUtil:Lcom/sony/imaging/app/util/BackUpUtil;
+
+    const-string v2, "ID_PICTUREEFFECTPLUS_CURRENT_EFFECT"
+
+    invoke-virtual {v1, v2, v0}, Lcom/sony/imaging/app/util/BackUpUtil;->setPreference(Ljava/lang/String;Ljava/lang/Object;)Z
+
+    :cond_ricoh_preset_ok"""
+
+    if target_backup in content:
+        content = content.replace(target_backup, repl_backup, 1)
+        print("Successfully injected Ricoh preset validation & persistent cleanup in getBackupEffectValue()")
+    else:
+        print("Warning: target_backup not found in PictureEffectPlusController.smali")
 
     with open(controller_path, 'w', encoding='utf-8') as f:
         f.write(content)
@@ -160,8 +196,14 @@ def patch_option_menu_layout_smali(layout_path):
     with open(layout_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # 1. Default effect to pop-color
-    content = content.replace('const-string v0, "part-color-plus"', 'const-string v0, "pop-color"')
+    # 1. Default effect to pop-color (ONLY in constructor initialization)
+    target_init = 'const-string v0, "part-color-plus"\n\n    iput-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;'
+    repl_init = 'const-string v0, "pop-color"\n\n    iput-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;'
+    if target_init in content:
+        content = content.replace(target_init, repl_init, 1)
+        print("Successfully set initial mSelectedItemId to 'pop-color'")
+    else:
+        print("Warning: target_init not found in PictureEffectPlusOptionMenuLayout.smali")
 
     # 2. Patch title to "理光相机"
     title_target = 'iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mScreenTitle:Landroid/widget/TextView;\n\n    const v1, 0x7f090028\n\n    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(I)V'
@@ -338,180 +380,51 @@ def patch_option_menu_layout_smali(layout_path):
     with open(layout_path, 'w', encoding='utf-8') as f:
         f.write(content)
 
-def patch_app_root_smali(app_root_path):
-    print(f"Patching {app_root_path}...")
-    with open(app_root_path, 'r', encoding='utf-8') as f:
+def patch_ee_state_smali(ee_state_path):
+    print(f"Patching {ee_state_path}...")
+    with open(ee_state_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # 1. Patch finish(Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;)V
-    pat_finish = r'\.method public finish\(Lcom/sony/imaging/app/fw/AppRoot\$FINISH_TYPE;\)V[\s\S]*?\.end method'
-    repl_finish = '''.method public finish(Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;)V
-    .locals 2
-    .param p1, "type"    # Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;
+    target = """    invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getInstance()Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;
 
-    .prologue
-    const-string v1, "DLApp Shutdown"
+    move-result-object v0
 
-    invoke-static {v1}, Lcom/sony/imaging/app/util/PTag;->start(Ljava/lang/String;)V
+    invoke-virtual {v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->forceEffectOptionSetting()V"""
 
-    :try_start_dacm
-    new-instance v0, Landroid/app/DAConnectionManager;
+    repl = """    invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getInstance()Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;
 
-    invoke-direct {v0, p0}, Landroid/app/DAConnectionManager;-><init>(Landroid/content/Context;)V
+    move-result-object v0
 
-    invoke-virtual {v0}, Landroid/app/DAConnectionManager;->finish()V
-    :try_end_dacm
-    .catch Ljava/lang/Throwable; {:try_start_dacm .. :try_end_dacm} :catch_dacm
+    invoke-virtual {v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->forceEffectSetting()V
 
-    :catch_dacm
-    invoke-super {p0}, Landroid/app/Activity;->finish()V
+    invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getInstance()Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;
 
-    const/4 v1, 0x3
+    move-result-object v0
 
-    invoke-static {v1}, Lcom/sony/imaging/app/fw/RunStatus;->setStatus(I)V
+    invoke-virtual {v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->forceEffectOptionSetting()V"""
 
-    return-void
-.end method'''
-    content, c1 = re.subn(pat_finish, repl_finish, content, count=1)
-    if c1 > 0:
-        print("Successfully patched finish() in AppRoot.smali")
+    if target in content and "forceEffectSetting" not in content:
+        content = content.replace(target, repl, 1)
+        print("Successfully injected forceEffectSetting() in PictureEffectEEState.onResume()")
     else:
-        print("Warning: Could not patch finish() in AppRoot.smali")
+        print("Notice: forceEffectSetting() already present or target not found in PictureEffectEEState.smali")
 
-    # 2. Patch onDestroy() - Clean onDestroy, reset RunStatus to FINISHED (5), NO killProcess/System.exit!
-    pat_dest = r'\.method protected final onDestroy\(\)V[\s\S]*?invoke-super \{p0\}, Landroid/app/Activity;->onDestroy\(\)V[\s\S]*?\.end method'
-    repl_dest = '''.method protected final onDestroy()V
-    .locals 1
-
-    .prologue
-    invoke-super {p0}, Landroid/app/Activity;->onDestroy()V
-
-    const/4 v0, 0x5
-
-    invoke-static {v0}, Lcom/sony/imaging/app/fw/RunStatus;->setStatus(I)V
-
-    return-void
-.end method'''
-    content, c2 = re.subn(pat_dest, repl_dest, content, count=1)
-    if c2 > 0:
-        print("Successfully patched onDestroy() in AppRoot.smali (clean return)")
-    else:
-        print("Warning: Could not patch onDestroy() in AppRoot.smali")
-
-    # 3. Patch onResume() to prevent DLApp Boot from Resume loop if finishing
-    pat_resume = r'(\.method protected onResume\(\)V[\s\S]*?\.prologue\s*)'
-    repl_resume = r'''\1invoke-virtual {p0}, Lcom/sony/imaging/app/fw/AppRoot;->isFinishing()Z
-
-    move-result v0
-
-    if-eqz v0, :cond_ricoh_not_finishing
-
-    invoke-super {p0}, Landroid/app/Activity;->finish()V
-
-    return-void
-
-    :cond_ricoh_not_finishing
-    invoke-static {}, Lcom/sony/imaging/app/fw/RunStatus;->getStatus()I
-
-    move-result v0
-
-    const/4 v1, 0x3
-
-    if-ne v0, v1, :cond_ricoh_not_status_finishing
-
-    invoke-super {p0}, Landroid/app/Activity;->finish()V
-
-    return-void
-
-    :cond_ricoh_not_status_finishing
-    '''
-    if "isFinishing" not in content:
-        content, c3 = re.subn(pat_resume, repl_resume, content, count=1)
-        if c3 > 0:
-            print("Successfully injected exit guard in onResume() in AppRoot.smali")
-        else:
-            print("Warning: Could not inject exit guard in onResume() in AppRoot.smali")
-    else:
-        content = content.replace('if-lt v0, v1', 'if-ne v0, v1')
-
-    with open(app_root_path, 'w', encoding='utf-8') as f:
+    with open(ee_state_path, 'w', encoding='utf-8') as f:
         f.write(content)
+
+def patch_app_root_smali(app_root_path):
+    # Official Sony AppRoot already has clean DAConnectionManager lifecycle.
+    # No modifications needed.
+    pass
 
 def patch_key_handler_smali(key_handler_path):
     print(f"Patching {key_handler_path}...")
-    smali_code = '''.class public Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;
-.super Lcom/sony/imaging/app/base/shooting/trigger/S1OffEEStateKeyHandler;
-.source "PictureEffectPlusS1OffEEStateKeyHandler.java"
+    with open(key_handler_path, 'r', encoding='utf-8') as f:
+        content = f.read()
 
-# static fields
-.field private static final ITEM_ID:Ljava/lang/String; = "ItemId"
-
-.field protected static final STRBUILD:Ljava/lang/StringBuilder;
-
-.field private static final TAG:Ljava/lang/String; = "PictureEffectPlusS1OffEEStateKeyHandler"
-
-# instance fields
-.field protected FUNC_NAME:Ljava/lang/String;
-
-# direct methods
-.method static constructor <clinit>()V
-    .locals 1
-
-    new-instance v0, Ljava/lang/StringBuilder;
-
-    invoke-direct {v0}, Ljava/lang/StringBuilder;-><init>()V
-
-    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->STRBUILD:Ljava/lang/StringBuilder;
-
-    return-void
-.end method
-
-.method public constructor <init>()V
-    .locals 1
-
-    invoke-direct {p0}, Lcom/sony/imaging/app/base/shooting/trigger/S1OffEEStateKeyHandler;-><init>()V
-
-    const-string v0, ""
-
-    iput-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->FUNC_NAME:Ljava/lang/String;
-
-    return-void
-.end method
-
-# virtual methods
-.method public pushedCenterKey()I
-    .locals 6
-
-    .prologue
-    const/4 v5, 0x1
-
-    invoke-static {v5}, Lcom/sony/imaging/app/pictureeffectplus/shooting/PictureEffectEEState;->setIsMenuStateAdd(Z)V
-
-    new-instance v0, Landroid/os/Bundle;
-
-    invoke-direct {v0}, Landroid/os/Bundle;-><init>()V
-
-    const-string v1, "ItemId"
-
-    const-string v2, "ApplicationTop"
-
-    invoke-virtual {v0, v1, v2}, Landroid/os/Bundle;->putString(Ljava/lang/String;Ljava/lang/String;)V
-
-    const-string v1, "MenuLayoutId"
-
-    const-string v2, "ID_PICTUREEFFECTPLUSOPTIONMENULAYOUT"
-
-    invoke-virtual {v0, v1, v2}, Landroid/os/Bundle;->putString(Ljava/lang/String;Ljava/lang/String;)V
-
-    invoke-virtual {p0, v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->openMenu(Landroid/os/Bundle;)V
-
-    const-string v1, "pushedCenterKey"
-
-    iput-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->FUNC_NAME:Ljava/lang/String;
-
-    return v5
-.end method
-
+    # Add pushedEnter5WayFuncKey and pushedEnterJoyStickFuncKey if not present
+    if 'pushedEnter5WayFuncKey' not in content:
+        extra_methods = '''
 .method public pushedEnter5WayFuncKey()I
     .locals 1
 
@@ -533,46 +446,39 @@ def patch_key_handler_smali(key_handler_path):
 
     return v0
 .end method
-
-.method public pushedCustomKey()I
-    .locals 1
-
-    .prologue
-    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/trigger/PictureEffectPlusS1OffEEStateKeyHandler;->pushedCenterKey()I
-
-    move-result v0
-
-    return v0
-.end method
 '''
+        content += extra_methods
+        print("Successfully appended pushedEnter5WayFuncKey and pushedEnterJoyStickFuncKey to key handler")
+
     with open(key_handler_path, 'w', encoding='utf-8') as f:
-        f.write(smali_code)
-    print("Successfully patched PictureEffectPlusS1OffEEStateKeyHandler.smali")
+        f.write(content)
 
 def patch_key_converter_smali(key_converter_path):
     print(f"Patching {key_converter_path}...")
     with open(key_converter_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    target = 'iget-object v11, p0, Lcom/sony/imaging/app/fw/KeyConverter;->mCustomKeyMgr:Lcom/sony/imaging/app/fw/ICustomKeyMgr;'
-    repl = '''const/16 v11, 0xe8
+    target = """    invoke-interface {v11, v2}, Lcom/sony/imaging/app/fw/ICustomKeyMgr;->get(I)Lcom/sony/imaging/app/fw/ICustomKey;
+
+    move-result-object v7"""
+
+    repl = """    invoke-interface {v11, v2}, Lcom/sony/imaging/app/fw/ICustomKeyMgr;->get(I)Lcom/sony/imaging/app/fw/ICustomKey;
+
+    move-result-object v7
+
+    const/16 v11, 0xe8
 
     if-ne v2, v11, :cond_ricoh_not_center
 
     const/4 v7, 0x0
 
-    sget-object v5, Lcom/sony/imaging/app/fw/CustomizableFunction;->Unchanged:Lcom/sony/imaging/app/fw/CustomizableFunction;
-
-    goto :cond_2
-
-    :cond_ricoh_not_center
-    iget-object v11, p0, Lcom/sony/imaging/app/fw/KeyConverter;->mCustomKeyMgr:Lcom/sony/imaging/app/fw/ICustomKeyMgr;'''
+    :cond_ricoh_not_center"""
 
     if target in content:
         content = content.replace(target, repl, 1)
         print("Successfully patched KeyConverter.smali: scanCode 0xe8 (Center Button) bypasses custom key intercept -> pushedCenterKey()")
     else:
-        print("Warning: target iget-object mCustomKeyMgr not found in KeyConverter.smali")
+        print("Warning: target invoke-interface mCustomKeyMgr not found in KeyConverter.smali")
 
     with open(key_converter_path, 'w', encoding='utf-8') as f:
         f.write(content)
@@ -693,6 +599,29 @@ def patch_app_name_smali(app_smali_path):
     else:
         print("App title already patched.")
 
+    # Reset default effect to "pop-color" on cold launcher boot
+    target_boot = """:pswitch_0
+    invoke-static {v5}, Lcom/sony/imaging/app/pictureeffectplus/shooting/PictureEffectEEState;->setIsMenuStateAdd(Z)V"""
+
+    repl_boot = """:pswitch_0
+    invoke-static {v5}, Lcom/sony/imaging/app/pictureeffectplus/shooting/PictureEffectEEState;->setIsMenuStateAdd(Z)V
+
+    invoke-static {}, Lcom/sony/imaging/app/util/BackUpUtil;->getInstance()Lcom/sony/imaging/app/util/BackUpUtil;
+
+    move-result-object v3
+
+    const-string v4, "ID_PICTUREEFFECTPLUS_CURRENT_EFFECT"
+
+    const-string v0, "pop-color"
+
+    invoke-virtual {v3, v4, v0}, Lcom/sony/imaging/app/util/BackUpUtil;->setPreference(Ljava/lang/String;Ljava/lang/Object;)Z"""
+
+    if target_boot in content and "ID_PICTUREEFFECTPLUS_CURRENT_EFFECT" not in content:
+        content = content.replace(target_boot, repl_boot, 1)
+        with open(app_smali_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print("Successfully injected cold boot pop-color reset in PictureEffectPlus.smali (BootFactor.LUNCHER)")
+
 def run_cmd(cmd, cwd=None):
     res = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     if res.returncode != 0:
@@ -739,6 +668,12 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         if os.path.exists(layout_smali):
             patch_option_menu_layout_smali(layout_smali)
 
+        ee_state_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'PictureEffectEEState.smali')
+        if os.path.exists(ee_state_smali):
+            patch_ee_state_smali(ee_state_smali)
+        else:
+            print("Warning: PictureEffectEEState.smali not found, skipping EEState patch.")
+
         app_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'PictureEffectPlus.smali')
         if os.path.exists(app_smali):
             patch_app_name_smali(app_smali)
@@ -784,7 +719,40 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
 
         # Step 7: Sign APK
         print(f"==> [7/7] Signing APK -> {output_apk} ...")
-        sign_apk(unsigned_apk, output_apk, pem_path=custom_key)
+        uber_jar = os.path.join(PROJECT_ROOT, 'tools', 'uber-apk-signer.jar')
+        if not os.path.exists(uber_jar) and os.path.exists('/tmp/uber-apk-signer.jar'):
+            uber_jar = '/tmp/uber-apk-signer.jar'
+
+        signed = False
+        java_candidates = [
+            '/opt/homebrew/Cellar/openjdk/26.0.2.1/libexec/openjdk.jdk/Contents/Home/bin/java',
+            '/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home/bin/java',
+            '/opt/homebrew/bin/java',
+            shutil.which('java')
+        ]
+        java_bin = None
+        for jc in java_candidates:
+            if jc and os.path.isfile(jc) and os.access(jc, os.X_OK):
+                # Verify java actually works
+                try:
+                    res = subprocess.run([jc, '-version'], capture_output=True)
+                    if res.returncode == 0:
+                        java_bin = jc
+                        break
+                except Exception:
+                    pass
+
+        if os.path.exists(uber_jar) and java_bin:
+            try:
+                shutil.copyfile(unsigned_apk, output_apk)
+                run_cmd([java_bin, '-jar', uber_jar, '-a', os.path.abspath(output_apk), '--overwrite', '--allowResign'])
+                print(f"Successfully signed with uber-apk-signer -> {output_apk}")
+                signed = True
+            except Exception as e:
+                print(f"uber-apk-signer failed ({e}), falling back to sign_apk...")
+
+        if not signed:
+            sign_apk(unsigned_apk, output_apk, pem_path=custom_key)
 
         print("\n" + "=" * 60)
         print("🎉 SUCCESS! Modded Ricoh Camera APK built successfully!")

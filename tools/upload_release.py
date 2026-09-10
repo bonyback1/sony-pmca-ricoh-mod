@@ -52,7 +52,7 @@ def publish_release(token, tag="v1.1.3", apk_path="PictureEffectPlus_Ricoh.apk",
         "User-Agent": "Sony-PMCA-Publisher"
     }
 
-    title = title or f"{tag} (B1.2) - 退出死循环彻底修复与生命周期规范化"
+    title = title or f"{tag} (B1.3) - 阻断创意风格叠加与全新胶片Gamma曲线"
     body = body or DEFAULT_BODY
 
     # 1. Check if release already exists for this tag

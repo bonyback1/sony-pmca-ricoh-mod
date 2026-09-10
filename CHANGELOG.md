@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-09-10 (B1.3)
+
+### Fixed & Enhanced
+- **Decoupled Filter Baseline from Camera Creative Style (Fix "Clear" / 清澈 Style Superposition)**:
+  - Resolved issue where Ricoh presets inherited and superimposed with the camera's native Creative Style (创意风格, e.g. "Clear" / 清澈, "Vivid", or user contrast offsets).
+  - In `RicohHook.applyHook`, explicitly enforces `CameraEx$ParametersModifier.setColorMode("standard")`, resets contrast/saturation/sharpness offsets to 0, and synchronizes `CreativeStyleController` and `DROAutoHDRController`.
+  - Guarantees 100% pure, consistent color pipeline independent of pre-existing camera menu styles.
+- **Redesigned Filmic Gamma Curves for All 5 Presets (Eliminate Harsh Contrast & Crushed Shadows)**:
+  - **理光 GR 正片 (Ricoh Positive Film)**: Replaced steep sigmoid ($k=8.0$, midtone slope 2.06) with natural filmic curve (midtone slope ~1.25, toe lift to protect shadows from input 64: 14 -> 45, smooth highlight shoulder to 1020). Restores authentic Ricoh GR positive film color tone, transparent shadows, and rich dynamic range.
+  - **理光负片 (Ricoh Negative Film)**: Softened midtone contrast (slope ~1.08), preserved matte black shadow lift (35) and rolled-off highlights (985) for classic vintage film mood.
+  - **高对比黑白 (Ricoh High Contrast B&W)**: Adjusted contrast slope from 2.75 to 1.81, retaining punchy graphic blacks while recovering fine asphalt/dark textures from digital black clipping.
+  - **森山大道风 (Moriyama Daido Rough B&W)**: Rebalanced slope from 3.94 (binary-like thresholding) to 2.38, preserving harsh street noir look with actual edge and structure rendition.
+  - **正负逆冲 (Ricoh Cross Process)**: Adjusted midtone slope to 1.25 with toe lift 8, providing clean cross-processing color shifts without muddy shadows.
+- **Clean Neutral Reset**:
+  - `RicohHook.resetHook` safely restores standard color mode and 0-offsets when exiting or switching presets.
+
 ## [1.1.2] - 2026-09-09 (B1.2)
 
 ### Fixed & Enhanced

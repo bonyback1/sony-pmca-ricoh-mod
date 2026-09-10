@@ -8,58 +8,39 @@ def pts_to_bytes(pts):
         b.append((v >> 8) & 0xff)
     return b
 
-def gen_curve_pos():
+def make_filmic_curve(slope=1.2, toe_lift=0, shoulder_max=1023, center=0.5):
     pts = []
     for i in range(1024):
-        x = (i / 1023.0 - 0.48) * -8.0
-        y = 1.0 / (1.0 + math.exp(x))
-        y0 = 1.0 / (1.0 + math.exp(0.48 * 8.0))
-        y1 = 1.0 / (1.0 + math.exp(-0.52 * 8.0))
-        norm = (y - y0) / (y1 - y0) * 1023.0
-        pts.append(max(0, min(1023, round(norm))))
+        t = i / 1023.0
+        if t < center:
+            norm_t = t / center
+            val = math.pow(norm_t, slope) * center
+        else:
+            norm_t = (1.0 - t) / (1.0 - center)
+            val = 1.0 - math.pow(norm_t, slope) * (1.0 - center)
+        scaled = toe_lift + val * (shoulder_max - toe_lift)
+        pts.append(max(0, min(1023, round(scaled))))
     return pts
+
+def gen_curve_pos():
+    # Ricoh GR Positive Film: gentle filmic S-curve, high shadow latitude (toe_lift=4, slope=1.22)
+    return make_filmic_curve(slope=1.22, toe_lift=4, shoulder_max=1020, center=0.48)
 
 def gen_curve_neg():
-    pts = []
-    for i in range(1024):
-        t = i / 1023.0
-        s = t * t * (3 - 2 * t)
-        val = 35 + s * (990 - 35)
-        pts.append(max(0, min(1023, round(val))))
-    return pts
+    # Ricoh Negative Film: matte shadows (toe_lift=35), gentle contrast (slope=1.12), soft highlight shoulder
+    return make_filmic_curve(slope=1.12, toe_lift=35, shoulder_max=985, center=0.50)
 
 def gen_curve_hcbw():
-    pts = []
-    for i in range(1024):
-        x = (i / 1023.0 - 0.50) * -11.0
-        y = 1.0 / (1.0 + math.exp(x))
-        y0 = 1.0 / (1.0 + math.exp(0.50 * 11.0))
-        y1 = 1.0 / (1.0 + math.exp(-0.50 * 11.0))
-        norm = (y - y0) / (y1 - y0) * 1023.0
-        pts.append(max(0, min(1023, round(norm))))
-    return pts
+    # Ricoh High Contrast B&W: punchy contrast (slope=1.85), deep rich blacks preserving dark textures
+    return make_filmic_curve(slope=1.85, toe_lift=0, shoulder_max=1023, center=0.50)
 
 def gen_curve_daido():
-    pts = []
-    for i in range(1024):
-        x = (i / 1023.0 - 0.50) * -16.0
-        y = 1.0 / (1.0 + math.exp(x))
-        y0 = 1.0 / (1.0 + math.exp(0.50 * 16.0))
-        y1 = 1.0 / (1.0 + math.exp(-0.50 * 16.0))
-        norm = (y - y0) / (y1 - y0) * 1023.0
-        pts.append(max(0, min(1023, round(norm))))
-    return pts
+    # Moriyama Daido: gritty, high-contrast graphic street B&W (slope=2.38)
+    return make_filmic_curve(slope=2.38, toe_lift=0, shoulder_max=1023, center=0.50)
 
 def gen_curve_xpro():
-    pts = []
-    for i in range(1024):
-        t = i / 1023.0
-        s = 1.0 / (1.0 + math.exp(-(t - 0.45) * 10.0))
-        s0 = 1.0 / (1.0 + math.exp(0.45 * 10.0))
-        s1 = 1.0 / (1.0 + math.exp(-0.55 * 10.0))
-        norm = (s - s0) / (s1 - s0) * 1023.0
-        pts.append(max(0, min(1023, round(norm))))
-    return pts
+    # Ricoh Cross Process: vivid contrast with cross-process tones (slope=1.30, toe_lift=8)
+    return make_filmic_curve(slope=1.30, toe_lift=8, shoulder_max=1018, center=0.46)
 
 curves = {
     'pos': pts_to_bytes(gen_curve_pos()),
@@ -465,7 +446,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 .end method
 
 .method public static applyHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;Ljava/lang/String;)Z
-    .locals 5
+    .locals 6
     .annotation system Ldalvik/annotation/Signature;
         value = {{
             "(",
@@ -521,12 +502,58 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     if-eqz v2, :cond_4
     const-string v4, "off"
     invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setPictureEffect(Ljava/lang/String;)V
+
+    # Force standard neutral baseline to prevent stacking with camera Clear/Vivid/etc.
+    const-string v4, "standard"
+    invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorMode(Ljava/lang/String;)V
+
+    const/4 v4, 0x0
+    invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
+    invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
+    invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
+
     invoke-virtual {{v2, v3}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setRGBMatrix([I)V
 
     :cond_4
     # 2. Commit parameters to hardware HAL
     invoke-virtual {{v1, p1}}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->setParameters(Landroid/util/Pair;)V
 
+    # Sync CreativeStyleController to standard
+    :try_start_cs
+    invoke-static {{}}, Lcom/sony/imaging/app/base/shooting/camera/CreativeStyleController;->getInstance()Lcom/sony/imaging/app/base/shooting/camera/CreativeStyleController;
+    move-result-object v4
+    if-eqz v4, :cond_cs
+    const-string v2, "CreativeStyle"
+    const-string v5, "standard"
+    invoke-virtual {{v4, v2, v5}}, Lcom/sony/imaging/app/base/shooting/camera/CreativeStyleController;->setValue(Ljava/lang/String;Ljava/lang/String;)V
+    :cond_cs
+    :try_end_cs
+    .catch Ljava/lang/Throwable; {{:try_start_cs .. :try_end_cs}} :catch_cs
+
+    goto :goto_dro
+
+    :catch_cs
+    move-exception v2
+
+    :goto_dro
+    # Sync DROAutoHDRController to off
+    :try_start_dro
+    invoke-static {{}}, Lcom/sony/imaging/app/base/shooting/camera/DROAutoHDRController;->getInstance()Lcom/sony/imaging/app/base/shooting/camera/DROAutoHDRController;
+    move-result-object v4
+    if-eqz v4, :cond_dro
+    const-string v2, "DroHdr"
+    const-string v5, "off"
+    invoke-virtual {{v4, v2, v5}}, Lcom/sony/imaging/app/base/shooting/camera/DROAutoHDRController;->setValue(Ljava/lang/String;Ljava/lang/String;)V
+    :cond_dro
+    :try_end_dro
+    .catch Ljava/lang/Throwable; {{:try_start_dro .. :try_end_dro}} :catch_dro
+
+    goto :goto_gamma
+
+    :catch_dro
+    move-exception v2
+
+    :goto_gamma
     # 3. Write 1024-point 10-bit Gamma Table
     invoke-static {{p0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getCameraEx(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)Lcom/sony/scalar/hardware/CameraEx;
     move-result-object v2
@@ -612,6 +639,12 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     if-eqz v1, :cond_3
     sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIdentityMatrix:[I
     invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setRGBMatrix([I)V
+    const-string v2, "standard"
+    invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorMode(Ljava/lang/String;)V
+    const/4 v2, 0x0
+    invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
+    invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
+    invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
     invoke-virtual {{v0, p1}}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->setParameters(Landroid/util/Pair;)V
 
     :cond_3

@@ -46,8 +46,26 @@ def patch_controller_smali(controller_path):
                 new_content = content.replace(sub_target, 'invoke-static {p0, p1}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->resetHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;)V\n    ' + sub_target, 1)
         content = new_content
 
-    # 2. Apply hook injection in setPlusPictureEffect
-    if "RicohHook;->applyHook" not in content:
+    # 2. Smart dispatch in setPlusPictureEffect: bypass resetPictureEffectSetting for Ricoh presets
+    target_reset_call = 'invoke-direct {p0, p1}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->resetPictureEffectSetting(Landroid/util/Pair;)V'
+    if "isRicohPreset" not in content and target_reset_call in content:
+        smart_dispatch = '''invoke-static {p2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->isRicohPreset(Ljava/lang/String;)Z
+
+    move-result v2
+
+    if-eqz v2, :cond_ricoh_reset
+
+    invoke-static {p0, p1, p2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->applyHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;Ljava/lang/String;)Z
+
+    const/4 v1, 0x1
+
+    goto/16 :cond_2
+
+    :cond_ricoh_reset
+    invoke-direct {p0, p1}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->resetPictureEffectSetting(Landroid/util/Pair;)V'''
+        content = content.replace(target_reset_call, smart_dispatch, 1)
+        print("Successfully injected smart Ricoh dispatch in setPlusPictureEffect (eliminating EVF flicker and reset IPC)")
+    elif "RicohHook;->applyHook" not in content:
         pat2 = r'(invoke-static\s+\{v\d+,\s*v\d+\},\s*Landroid/util/Log;->i\(Ljava/lang/String;Ljava/lang/String;\)I\s*(?:\.line\s+\d+\s*)?const-string\s+v2,\s*"part-color-plus")'
         repl2 = '''invoke-static {p0, p1, p2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->applyHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;Ljava/lang/String;)Z
 

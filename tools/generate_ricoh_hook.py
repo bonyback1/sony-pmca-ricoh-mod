@@ -281,6 +281,21 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     return-object v1
 .end method
 
+.method public static isRicohPreset(Ljava/lang/String;)Z
+    .locals 1
+
+    invoke-static {{p0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getRGBMatrix(Ljava/lang/String;)[I
+    move-result-object v0
+    if-eqz v0, :cond_not_ricoh
+
+    const/4 v0, 0x1
+    return v0
+
+    :cond_not_ricoh
+    const/4 v0, 0x0
+    return v0
+.end method
+
 .method public static getRGBMatrix(Ljava/lang/String;)[I
     .locals 2
 
@@ -512,65 +527,51 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
     invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
 
+    # Force DRO and HDR to off directly on modifier in the same Pair (atomic commit)
+    const-string v4, "off"
+    invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setDROMode(Ljava/lang/String;)V
+    invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setHDRMode(Ljava/lang/String;)V
+
     invoke-virtual {{v2, v3}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setRGBMatrix([I)V
 
     :cond_4
-    # 2. Commit parameters to hardware HAL
+    # 2. Single atomic commit of parameters to hardware HAL
     invoke-virtual {{v1, p1}}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->setParameters(Landroid/util/Pair;)V
 
-    # Sync CreativeStyleController to standard
-    :try_start_cs
-    invoke-static {{}}, Lcom/sony/imaging/app/base/shooting/camera/CreativeStyleController;->getInstance()Lcom/sony/imaging/app/base/shooting/camera/CreativeStyleController;
-    move-result-object v4
-    if-eqz v4, :cond_cs
-    const-string v2, "CreativeStyle"
-    const-string v5, "standard"
-    invoke-virtual {{v4, v2, v5}}, Lcom/sony/imaging/app/base/shooting/camera/CreativeStyleController;->setValue(Ljava/lang/String;Ljava/lang/String;)V
-    :cond_cs
-    :try_end_cs
-    .catch Ljava/lang/Throwable; {{:try_start_cs .. :try_end_cs}} :catch_cs
-
-    goto :goto_dro
-
-    :catch_cs
-    move-exception v2
-
-    :goto_dro
-    # Sync DROAutoHDRController to off
-    :try_start_dro
-    invoke-static {{}}, Lcom/sony/imaging/app/base/shooting/camera/DROAutoHDRController;->getInstance()Lcom/sony/imaging/app/base/shooting/camera/DROAutoHDRController;
-    move-result-object v4
-    if-eqz v4, :cond_dro
-    const-string v2, "DroHdr"
-    const-string v5, "off"
-    invoke-virtual {{v4, v2, v5}}, Lcom/sony/imaging/app/base/shooting/camera/DROAutoHDRController;->setValue(Ljava/lang/String;Ljava/lang/String;)V
-    :cond_dro
-    :try_end_dro
-    .catch Ljava/lang/Throwable; {{:try_start_dro .. :try_end_dro}} :catch_dro
-
-    goto :goto_gamma
-
-    :catch_dro
-    move-exception v2
-
-    :goto_gamma
-    # 3. Write 1024-point 10-bit Gamma Table
+    # 3. Write 1024-point 10-bit Gamma Table & guarantee release of DeviceBuffer
     invoke-static {{p0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getCameraEx(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)Lcom/sony/scalar/hardware/CameraEx;
     move-result-object v2
     if-eqz v2, :cond_5
+
     invoke-virtual {{v2}}, Lcom/sony/scalar/hardware/CameraEx;->createGammaTable()Lcom/sony/scalar/hardware/CameraEx$GammaTable;
     move-result-object v3
     if-eqz v3, :cond_5
+
+    :try_start_gt
     const/4 v4, 0x1
     invoke-virtual {{v3, v4}}, Lcom/sony/scalar/hardware/CameraEx$GammaTable;->setPictureEffectGammaForceOff(Z)V
 
     invoke-static {{p2}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getGammaBytes(Ljava/lang/String;)[B
     move-result-object v4
-    if-eqz v4, :cond_5
+    if-eqz v4, :cond_gt_rel
+
     new-instance v0, Ljava/io/ByteArrayInputStream;
     invoke-direct {{v0, v4}}, Ljava/io/ByteArrayInputStream;-><init>([B)V
     invoke-virtual {{v3, v0}}, Lcom/sony/scalar/hardware/CameraEx$GammaTable;->write(Ljava/io/InputStream;)I
     invoke-virtual {{v2, v3}}, Lcom/sony/scalar/hardware/CameraEx;->setExtendedGammaTable(Lcom/sony/scalar/hardware/CameraEx$GammaTable;)V
+
+    :cond_gt_rel
+    :try_end_gt
+    .catchall {{:try_start_gt .. :try_end_gt}} :catchall_gt
+
+    # Critical: Release native DMA DeviceBuffer
+    invoke-virtual {{v3}}, Lcom/sony/scalar/hardware/CameraEx$GammaTable;->release()V
+    goto :cond_5
+
+    :catchall_gt
+    move-exception v4
+    invoke-virtual {{v3}}, Lcom/sony/scalar/hardware/CameraEx$GammaTable;->release()V
+    throw v4
 
     :cond_5
     const/4 v2, 0x1
@@ -637,7 +638,8 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     iget-object v1, p1, Landroid/util/Pair;->second:Ljava/lang/Object;
     check-cast v1, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;
     if-eqz v1, :cond_3
-    sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIdentityMatrix:[I
+    # Pass null to bypass RGB matrix multiplication hardware
+    const/4 v2, 0x0
     invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setRGBMatrix([I)V
     const-string v2, "standard"
     invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorMode(Ljava/lang/String;)V
@@ -754,7 +756,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{p0, v0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_check_xpro
-    const-string v0, "\u68ee\u5c71\u5927\u9053\u98ce\u7c97\u7c9e\u9ad8\u5bf9\u6bd4\u9ed1\u767d (Moriyama Daido B&W)"
+    const-string v0, "\u68ee\u5c71\u5927\u9053\u98ce\u7c97\u7c8a\u9ad8\u5bf9\u6bd4\u9ed1\u767d (Moriyama Daido B&W)"
     return-object v0
 
     :cond_check_xpro

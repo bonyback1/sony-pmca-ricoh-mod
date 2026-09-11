@@ -15,23 +15,23 @@ import argparse
 REPO = "bonyback1/sony-pmca-ricoh-mod"
 API_URL = f"https://api.github.com/repos/{REPO}/releases"
 
-DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.1.3 (B1.3) 发布
+DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.1.4 (B1.4) 发布
 
-本版本重点解决了滤镜色彩与相机原有“清澈 (Clear)”等创意风格叠加的问题，并全面重构了 5 款定制滤镜的 Gamma 动力学曲线，还原纯正自然的真实理光相机胶片质感。
+本版本深度对照索尼官方 PMCA 架构开发圣经（Bible.md）全栈规范，修复了底层 Native 硬件内存泄漏与参数级联覆盖等系统级隐患，并消除了转动拨轮切换滤镜时的取景器黑闪与迟滞。
 
 #### 🌟 核心更新与调优
-- **彻底阻断与相机原有创意风格叠加（基准锁定）**：
-  - 此前索尼官方仅在“分色+”效果下重置创意风格，切换为定制滤镜并关闭照片效果后，底层的硬件 ISP 仍会继承相机原先开启的“清澈 (Clear)”或鲜明模式及用户对比度偏移，导致对比度异常过高。
-  - 在 `RicohHook.applyHook` 中强制向底层写入 `setColorMode("standard")`，对比度、饱和度、锐度偏移全部归零，并同步复位 `CreativeStyleController` 与 `DROAutoHDRController`，确保滤镜无论在何种相机设置下都拥有 100% 独立中性的纯正基准。
-- **全新重构 5 款经典滤镜的 10-bit Filmic Gamma 曲线**：
-  - **理光 GR 正片 (Ricoh Positive Film)**：中灰斜率从暴力的 2.06 回调至自然的 1.22~1.25，暗部抬升保护阴影细节（输入 64 映射值由 14 提升至 45），高光加入柔和滚降，彻底消除死黑，呈现真实理光正片经典的青蓝色天空、浓郁黄绿与丰富暗部层次。
-  - **理光负片 (Ricoh Negative Film)**：反差斜率优化至 1.08~1.12，黑位轻度抬升至 35，呈现柔和低对比、哑光泛暖的复古胶片韵味。
-  - **高对比黑白 (Ricoh High Contrast B&W)**：斜率优化至 1.81，保全深邃油墨质感的同时恢复暗部细节与胶片颗粒层次。
-  - **森山大道风 (Moriyama Daido Rough B&W)**：斜率由近乎二值化的 3.94 调整至 2.38，街头黑白张力十足且保留轮廓与暗部细节。
-  - **正负逆冲 (Ricoh Cross Process)**：斜率调优至 1.25，青绿暗部与暖黄高光平衡过渡，鲜明通透。
-- **全生命周期与稳定性保障**：
-  - 滤镜退出/切换时自动安全复位标准基准与零偏移。
-  - 继承 v1.1.2 干净退出的防重入机制，以及关机开机正常停留机制。
+- **彻底杜绝 Native DeviceBuffer DMA 硬件内存泄漏**：
+  - 依据规范，`CameraEx$GammaTable` 是底层通过 `/dev/video*` 直接分配的 Linux 内核物理 DMA 内存。此前写入 HAL 后缺失显式 `release()`，且在每次关闭菜单、按 Fn 调 ISO 或按回放查看照片返回取景器时均被触发，高频操作会耗尽缓冲池。
+  - 在 `RicohHook.applyHook` 中加入严格的 `try-finally` 硬件保护，向 HAL 提交后立即释放 `table.release()`，确保整机全天候拍摄绝不死机或冻结取景器。
+- **重构为单次原子参数提交（杜绝机身历史设置冲掉 0 偏移）**：
+  - 彻底剔除跨单例调用 `CreativeStyleController.setValue` 与 `DROAutoHDRController.setValue` 引发的级联 IPC；
+  - 直接在单一 `ParametersModifier` 中一步到位设置中性标准风格、0 对比度/饱和度/锐度、DRO/HDR 禁用、色彩矩阵与特效关闭，并执行单次原子提交。
+- **拨轮切换滤镜消除取景器闪黑与 IPC 减负**：
+  - 在 `setPlusPictureEffect` 入口处注入智能分发：在 5 款理光胶片预设之间转动拨轮切换时，跳过清空曲线与单位阵的中间过渡步骤，直接原子覆盖目标色彩，彻底消除 EVF/LCD 画面黑闪跳色，切换响应更迅捷。
+- **色彩矩阵重置硬件旁路（降低发热与功耗）**：
+  - 在 `resetHook` 中，将重置写入对角 1024 阵改为向 HAL 传入 `null`，让 BIONZ X 处理器直接 bypass 矩阵乘法器硬件，更省电。
+- **字面量修正**：
+  - 修正森山大道风引导词中的汉字笔误（“森山大道风粗粝高对比黑白”）。
 
 #### 📦 附件说明
 - `PictureEffectPlus_Ricoh.apk`：已签名并验证通过的正式安装包（集成 Android 4.1.2 兼容的 v1/v2/v3 签名）。
@@ -42,7 +42,7 @@ DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod)
 ```
 """
 
-def publish_release(token, tag="v1.1.3", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v1.1.4", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 
@@ -52,7 +52,7 @@ def publish_release(token, tag="v1.1.3", apk_path="PictureEffectPlus_Ricoh.apk",
         "User-Agent": "Sony-PMCA-Publisher"
     }
 
-    title = title or f"{tag} (B1.3) - 阻断创意风格叠加与全新胶片Gamma曲线"
+    title = title or f"{tag} (B1.4) - 基于PMCA开发圣经的架构加固与内存防崩"
     body = body or DEFAULT_BODY
 
     # 1. Check if release already exists for this tag
@@ -118,7 +118,7 @@ def publish_release(token, tag="v1.1.3", apk_path="PictureEffectPlus_Ricoh.apk",
 def main():
     parser = argparse.ArgumentParser(description="Publish Release to GitHub")
     parser.add_argument('-t', '--token', default=os.environ.get('GITHUB_TOKEN'), help="GitHub Personal Access Token")
-    parser.add_argument('--tag', default="v1.1.3", help="Release tag (default: v1.1.3)")
+    parser.add_argument('--tag', default="v1.1.4", help="Release tag (default: v1.1.4)")
     parser.add_argument('--apk', default="PictureEffectPlus_Ricoh.apk", help="Path to APK binary")
     args = parser.parse_args()
 

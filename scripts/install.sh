@@ -74,7 +74,7 @@ adb disconnect "${TARGET}" 2>/dev/null || true
 CONNECT_OUT=$(adb connect "${TARGET}")
 echo "${CONNECT_OUT}"
 
-if echo "${CONNECT_OUT}" | grep -q "unable to connect"; then
+if ! echo "${CONNECT_OUT}" | grep -qE "connected to|already connected"; then
     echo ""
     echo "❌ 连接相机失败！请检查以下事项："
     echo "   1. 相机是否已连入 Wi-Fi，且与电脑在同一个局域网子网；"

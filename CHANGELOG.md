@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-09-11 (B1.4)
+
+### Fixed & Enhanced (Architectural Hardening based on PMCA Bible.md)
+- **Eliminated Native `DeviceBuffer` DMA Memory Leak**:
+  - In `RicohHook.applyHook`, immediately invokes `GammaTable.release()` after calling `CameraEx.setExtendedGammaTable()`.
+  - Added strict `try-finally` exception protection ensuring the 2KB native DMA device buffer is unconditionally released back to the Linux kernel/V4L2 hardware driver even on exceptions.
+  - Fixes crash/freeze bug when repeatedly toggling menus, adjusting ISO/aperture via Fn, or reviewing photos in playback.
+- **Single Atomic `setParameters` Commit (Fix Cascading Overwrite)**:
+  - Eliminated secondary and tertiary IPC calls to `CreativeStyleController.setValue` and `DROAutoHDRController.setValue` that inadvertently reloaded user backup settings and overwrote the neutral 0-offsets.
+  - Merged `setColorMode("standard")`, contrast 0, saturation 0, sharpness 0, `setDROMode("off")`, `setHDRMode("off")`, `setPictureEffect("off")`, and `setRGBMatrix` into a single atomic `setParameters(p1)` HAL commit.
+- **Eliminated EVF / LCD Transitional Flicker During Filter Dialing**:
+  - In `PictureEffectPlusController.setPlusPictureEffect`, injected smart check `RicohHook.isRicohPreset(value)`:
+  - When rotating dials directly between Ricoh presets, now bypasses the intermediate `resetPictureEffectSetting` (which previously wiped tone curves and loaded identity matrices for 2ms before applying new presets).
+  - Provides instantaneous, seamless filter switching with zero black/neutral screen flicker and 50% reduced Binder IPC overhead.
+- **Matrix Reset Hardware Bypass**:
+  - In `RicohHook.resetHook`, passes `null` to `CameraEx$ParametersModifier.setRGBMatrix(null)` instead of writing an identity matrix, allowing BIONZ X ISP to cleanly bypass hardware matrix multiplier logic and save battery power.
+- **Typo Fix**:
+  - Corrected guide string typo `"森山大道风粗粞高对比黑白"` to `"森山大道风粗粝高对比黑白"`.
+
 ## [1.1.3] - 2026-09-10 (B1.3)
 
 ### Fixed & Enhanced

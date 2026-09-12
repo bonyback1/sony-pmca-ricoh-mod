@@ -223,12 +223,17 @@ def patch_option_menu_layout_smali(layout_path):
     else:
         print("Warning: target_init not found in PictureEffectPlusOptionMenuLayout.smali")
 
-    # 2. Patch title to "理光相机"
+    # 2. Patch title to dynamic RicohHook.getAppTitle()
     title_target = 'iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mScreenTitle:Landroid/widget/TextView;\n\n    const v1, 0x7f090028\n\n    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(I)V'
-    title_repl = 'iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mScreenTitle:Landroid/widget/TextView;\n\n    const-string v1, "\\u7406\\u5149\\u76f8\\u673a"\n\n    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V'
+    title_repl = 'iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mScreenTitle:Landroid/widget/TextView;\n\n    invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getAppTitle()Ljava/lang/String;\n\n    move-result-object v1\n\n    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V'
     if title_target in content:
         content = content.replace(title_target, title_repl)
-        print("Successfully set mScreenTitle to '理光相机'")
+        print("Successfully hooked mScreenTitle to RicohHook.getAppTitle()")
+    elif 'const-string v1, "\\u7406\\u5149\\u76f8\\u673a"' in content:
+        old_repl = 'const-string v1, "\\u7406\\u5149\\u76f8\\u673a"'
+        new_repl = 'invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getAppTitle()Ljava/lang/String;\n\n    move-result-object v1'
+        content = content.replace(old_repl, new_repl, 1)
+        print("Successfully updated mScreenTitle to RicohHook.getAppTitle()")
 
     # 3. Patch getLastStoredValues() to prevent NullPointerException
     pat_glsv = r'\.method private getLastStoredValues\(\)V[\s\S]*?\.end method'
@@ -630,13 +635,23 @@ def patch_resources_arsc(arsc_path):
         'Effet de photo+', 'Efecto de foto+'
     }
 
+    simp_names = {'照片效果+', '照片\n效果+'}
+    trad_names = {'相片效果+', '相片\n效果+'}
+
     replaced_count = 0
     for idx in range(len(strings)):
-        if strings[idx] in target_names:
+        s = strings[idx]
+        if s in simp_names:
             strings[idx] = '理光相机'
             replaced_count += 1
+        elif s in trad_names:
+            strings[idx] = '理光相機'
+            replaced_count += 1
+        elif s in target_names:
+            strings[idx] = 'Ricoh Camera'
+            replaced_count += 1
 
-    print(f"Replaced {replaced_count} localized app titles in resources.arsc with '理光相机'")
+    print(f"Replaced {replaced_count} localized app titles in resources.arsc with adaptive multi-language names ('Ricoh Camera' / '理光相機' / '理光相机')")
 
     def encode_str(s):
         u8 = s.encode('utf-8')
@@ -691,16 +706,19 @@ def patch_app_name_smali(app_smali_path):
     with open(app_smali_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    target_str = r'const-string v3, "\u7406\u5149\u76f8\u673a"'
-    if target_str not in content:
-        pat = r'invoke-virtual\s+\{p0\},\s*Lcom/sony/imaging/app/pictureeffectplus/PictureEffectPlus;->getResources\(\)Landroid/content/res/Resources;[\s\S]*?invoke-virtual\s+\{v\d+,\s*v\d+\},\s*Landroid/content/res/Resources;->getString\(I\)Ljava/lang/String;\s*move-result-object\s+v\d+'
-        repl = target_str
-        content = re.sub(pat, lambda m: repl, content, count=1)
+    target_hook = 'invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getAppTitle()Ljava/lang/String;\n\n    move-result-object v3'
+    if target_hook not in content:
+        if r'const-string v3, "\u7406\u5149\u76f8\u673a"' in content:
+            content = content.replace(r'const-string v3, "\u7406\u5149\u76f8\u673a"', target_hook, 1)
+            print("Successfully updated app title to dynamic RicohHook.getAppTitle() in PictureEffectPlus.smali")
+        else:
+            pat = r'invoke-virtual\s+\{p0\},\s*Lcom/sony/imaging/app/pictureeffectplus/PictureEffectPlus;->getResources\(\)Landroid/content/res/Resources;[\s\S]*?invoke-virtual\s+\{v\d+,\s*v\d+\},\s*Landroid/content/res/Resources;->getString\(I\)Ljava/lang/String;\s*move-result-object\s+v\d+'
+            content = re.sub(pat, lambda m: target_hook, content, count=1)
+            print("Successfully hooked app title to dynamic RicohHook.getAppTitle() in PictureEffectPlus.smali")
         with open(app_smali_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        print("Successfully updated app title to '理光相机' in PictureEffectPlus.smali")
     else:
-        print("App title already patched.")
+        print("App title already hooked to dynamic RicohHook.getAppTitle().")
 
     # Reset default effect to "pop-color" on cold launcher boot
     target_boot = """:pswitch_0

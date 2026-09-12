@@ -1382,47 +1382,185 @@
     return-void
 .end method
 
+.method public static getLanguageType()I
+    .locals 3
+
+    # Default: 0 = English / Global
+    const/4 v0, 0x0
+
+    :try_start_0
+    invoke-static {}, Ljava/util/Locale;->getDefault()Ljava/util/Locale;
+    move-result-object v1
+    if-eqz v1, :cond_fallback
+
+    invoke-virtual {v1}, Ljava/util/Locale;->getLanguage()Ljava/lang/String;
+    move-result-object v2
+    if-eqz v2, :cond_fallback
+
+    const-string v0, "zh"
+    invoke-virtual {v2, v0}, Ljava/lang/String;->startsWith(Ljava/lang/String;)Z
+    move-result v0
+    if-eqz v0, :cond_fallback
+
+    invoke-virtual {v1}, Ljava/util/Locale;->getCountry()Ljava/lang/String;
+    move-result-object v1
+    if-eqz v1, :cond_simp
+
+    const-string v0, "TW"
+    invoke-virtual {v1, v0}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
+    move-result v0
+    if-eqz v0, :cond_chk_hk
+    const/4 v0, 0x1
+    return v0
+
+    :cond_chk_hk
+    const-string v0, "HK"
+    invoke-virtual {v1, v0}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
+    move-result v0
+    if-eqz v0, :cond_chk_mo
+    const/4 v0, 0x1
+    return v0
+
+    :cond_chk_mo
+    const-string v0, "MO"
+    invoke-virtual {v1, v0}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
+    move-result v0
+    if-eqz v0, :cond_simp
+    const/4 v0, 0x1
+    return v0
+
+    :cond_simp
+    # 2 = Simplified Chinese
+    const/4 v0, 0x2
+    return v0
+
+    :cond_fallback
+    # 0 = English / Global
+    const/4 v0, 0x0
+    return v0
+    :try_end_0
+    .catch Ljava/lang/Throwable; {:try_start_0 .. :try_end_0} :catch_0
+
+    :catch_0
+    move-exception v1
+    const/4 v0, 0x0
+    return v0
+.end method
+
+.method public static getAppTitle()Ljava/lang/String;
+    .locals 2
+
+    invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getLanguageType()I
+    move-result v0
+
+    const/4 v1, 0x1
+    if-ne v0, v1, :cond_simp
+    const-string v0, "理光相機"
+    return-object v0
+
+    :cond_simp
+    const/4 v1, 0x2
+    if-ne v0, v1, :cond_eng
+    const-string v0, "理光相机"
+    return-object v0
+
+    :cond_eng
+    const-string v0, "Ricoh Camera"
+    return-object v0
+.end method
+
 .method public static getFilterName(Ljava/lang/String;)Ljava/lang/String;
-    .locals 1
+    .locals 2
 
-    if-eqz p0, :cond_none
+    if-nez p0, :cond_start
+    const/4 v0, 0x0
+    return-object v0
 
+    :cond_start
+    invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getLanguageType()I
+    move-result v1
+
+    # 1. pop-color
     const-string v0, "pop-color"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_check_neg
+    if-nez v1, :cond_pop_zh
+    const-string v0, "Ricoh GR Positive Film"
+    return-object v0
+    :cond_pop_zh
     const-string v0, "理光 GR 正片"
     return-object v0
 
     :cond_check_neg
+    # 2. retro-photo
     const-string v0, "retro-photo"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_check_hcbw
-    const-string v0, "理光负片"
+    if-nez v1, :cond_neg_zh
+    const-string v0, "Ricoh Negative Film"
+    return-object v0
+    :cond_neg_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_neg_cn
+    const-string v0, "理光 負片"
+    return-object v0
+    :cond_neg_cn
+    const-string v0, "理光 负片"
     return-object v0
 
     :cond_check_hcbw
+    # 3. richtone-mono
     const-string v0, "richtone-mono"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_check_daido
+    if-nez v1, :cond_hcbw_zh
+    const-string v0, "High Contrast B&W"
+    return-object v0
+    :cond_hcbw_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_hcbw_cn
+    const-string v0, "高對比黑白"
+    return-object v0
+    :cond_hcbw_cn
     const-string v0, "高对比黑白"
     return-object v0
 
     :cond_check_daido
+    # 4. rough-mono
     const-string v0, "rough-mono"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_check_xpro
+    if-nez v1, :cond_daido_zh
+    const-string v0, "Moriyama Daido B&W"
+    return-object v0
+    :cond_daido_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_daido_cn
+    const-string v0, "森山大道風"
+    return-object v0
+    :cond_daido_cn
     const-string v0, "森山大道风"
     return-object v0
 
     :cond_check_xpro
+    # 5. watercolor
     const-string v0, "watercolor"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_none
+    if-nez v1, :cond_xpro_zh
+    const-string v0, "Cross Process"
+    return-object v0
+    :cond_xpro_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_xpro_cn
+    const-string v0, "正負逆沖"
+    return-object v0
+    :cond_xpro_cn
     const-string v0, "正负逆冲"
     return-object v0
 
@@ -1432,46 +1570,97 @@
 .end method
 
 .method public static getFilterGuide(Ljava/lang/String;)Ljava/lang/String;
-    .locals 1
+    .locals 2
 
-    if-eqz p0, :cond_none
+    if-nez p0, :cond_start
+    const/4 v0, 0x0
+    return-object v0
 
+    :cond_start
+    invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getLanguageType()I
+    move-result v1
+
+    # 1. pop-color
     const-string v0, "pop-color"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_check_neg
+    if-nez v1, :cond_guide_pop_zh
+    const-string v0, "Ricoh GR Positive Film color effect"
+    return-object v0
+    :cond_guide_pop_zh
     const-string v0, "理光 GR 正片色彩效果 (Ricoh Positive Film)"
     return-object v0
 
     :cond_check_neg
+    # 2. retro-photo
     const-string v0, "retro-photo"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_check_hcbw
-    const-string v0, "理光负片胶片色彩效果 (Ricoh Negative Film)"
+    if-nez v1, :cond_guide_neg_zh
+    const-string v0, "Ricoh Negative Film vintage color effect"
+    return-object v0
+    :cond_guide_neg_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_guide_neg_cn
+    const-string v0, "理光 負片膠片色彩效果 (Ricoh Negative Film)"
+    return-object v0
+    :cond_guide_neg_cn
+    const-string v0, "理光 负片胶片色彩效果 (Ricoh Negative Film)"
     return-object v0
 
     :cond_check_hcbw
+    # 3. richtone-mono
     const-string v0, "richtone-mono"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_check_daido
+    if-nez v1, :cond_guide_hcbw_zh
+    const-string v0, "High Contrast B&W monochrome film effect"
+    return-object v0
+    :cond_guide_hcbw_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_guide_hcbw_cn
+    const-string v0, "高對比黑白膠片效果 (Ricoh High Contrast B&W)"
+    return-object v0
+    :cond_guide_hcbw_cn
     const-string v0, "高对比黑白胶片效果 (Ricoh High Contrast B&W)"
     return-object v0
 
     :cond_check_daido
+    # 4. rough-mono
     const-string v0, "rough-mono"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_check_xpro
-    const-string v0, "森山大道风粗粊高对比黑白 (Moriyama Daido B&W)"
+    if-nez v1, :cond_guide_daido_zh
+    const-string v0, "Moriyama Daido rough high contrast B&W"
+    return-object v0
+    :cond_guide_daido_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_guide_daido_cn
+    const-string v0, "森山大道風粗糲高對比黑白 (Moriyama Daido B&W)"
+    return-object v0
+    :cond_guide_daido_cn
+    const-string v0, "森山大道风粗粝高对比黑白 (Moriyama Daido B&W)"
     return-object v0
 
     :cond_check_xpro
+    # 5. watercolor
     const-string v0, "watercolor"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_none
+    if-nez v1, :cond_guide_xpro_zh
+    const-string v0, "Ricoh Cross Process unique tone effect"
+    return-object v0
+    :cond_guide_xpro_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_guide_xpro_cn
+    const-string v0, "正負逆沖獨特色彩反沖效果 (Ricoh Cross Process)"
+    return-object v0
+    :cond_guide_xpro_cn
     const-string v0, "正负逆冲独特色彩反冲效果 (Ricoh Cross Process)"
     return-object v0
 

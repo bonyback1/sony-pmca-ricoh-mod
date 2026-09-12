@@ -15,27 +15,25 @@ import argparse
 REPO = "bonyback1/sony-pmca-ricoh-mod"
 API_URL = f"https://api.github.com/repos/{REPO}/releases"
 
-DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.2.0 (B2.0) 发布
+DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.3.0 (B2.1) 发布
 
-本版本正式落地理光 GR3 胶片色彩科学深度重构（第一阶段）：引入硬件级白平衡偏移注入与现场保护、Gamma 曲线内嵌曝光补偿烘焙，以及全新的行和归一化高低光分色 3×3 矩阵。
+本版本正式引入相机运行时「自适应多语言」引擎，依托 Android 底层 Locale 自动感知，实现一套统一 APK 在 English、繁體中文（台灣/香港）、简体中文（大陆）及其他全球系统语言下的无感自适应匹配！
 
 #### 🌟 核心更新与调优
-- **硬件级白平衡偏移注入与用户现场彻底恢复 (Hardware White Balance Shifts)**:
-  - 针对理光 GR3 直出色彩底层物理特性，在 `RicohHook` 中深度注入硬件级白平衡偏移调用：`setLightBalanceForWhiteBalance`（LB 琥珀/蓝色温偏置，范围 $[-14, +14]$）与 `setColorCompensationForWhiteBalance`（CC 绿色/洋红色彩补偿，范围 $[-14, +14]$）。
-  - **理光 GR 正片**: 注入 $LB=+2$ (琥珀暖调), $CC=-1$ (微洋红补偿)，重现理光 GR3 正片特有的暖阳色底。
-  - **理光负片**: 注入 $LB=+4$ (明显暖琥珀), $CC=-2$ (品红微调)，打造泛黄暖调的胶片底色。
-  - **正负逆冲**: 注入 $LB=-3$ (冷青蓝), $CC=+2$ (显色绿调)，呈现戏剧化冷冲印风格。
-  - **黑白滤镜**: 保持 $LB=0, CC=0$ 原生灰度平衡。
-  - **用户原生现场保护与零残留恢复**: 首次激活滤镜时自动保存用户原先设置的相机白平衡偏移，在切换或退出应用时精准还原，杜绝机身全局色彩污染。
-- **1024 阶 10-bit Gamma 曲线内嵌曝光补偿烘焙 (EV-Baking Tone Curves)**:
-  - 避开调用 `setExposureCompensation()` 对机身物理曝光拨盘与测光标尺的干扰，直接将感光量比率 $2^{\Delta \text{EV}}$ 烘焙入 1024 点 10-bit 非线性 Gamma 表：
-    - **理光 GR 正片**: 内嵌 -0.33 EV 曝光压暗烘焙，有效压制高光死白，增强天空蓝与高光浓郁色彩厚度。
-    - **森山大道风**: 内嵌 -0.33 EV 曝光压暗烘焙，加剧强反差街头黑白张力。
-    - **理光负片**: 内嵌 +0.33 EV 曝光提亮烘焙，配合哑光黑位抬升，模拟负片超大宽容度的高光滚降与通透柔和暗部。
-- **全新高低光分色校准 3×3 颜色矩阵 (Split-Toning Normalized Matrices)**:
-  - 重新优化并应用严格行和归一化（$\sum_j M_{ij} = 1024$）的 Q10 矩阵，灰阶无色偏。
-  - 依托 BIONZ X ISP 的「RAW Bayer $\rightarrow$ 前置 WB 偏移 $\rightarrow$ Demosaic $\rightarrow$ 1024阶非线性 Gamma $\rightarrow$ 后置 3×3 色彩矩阵」管线机制：
-    - 前置 WB 注入暖调，进入非线性 S 曲线后高低光自然解耦，后置矩阵对高光压制多余洋红并强化青绿饱和度，首次在索尼微单上完美重现理光 GR3 特有的**「暗部偏冷青、亮部微泛琥珀」高低光分色 (Split Toning)**。
+- **运行时 Locale 自动感知引擎 (`RicohHook.getLanguageType`)**:
+  - 底层调用 `Locale.getDefault()` 实时感知机身语言，零人工配置；
+  - 自动归类为英文/全球通用 (0)、繁體中文 (1) 与 简体中文 (2)，当用户切换相机语言时，软件全自动无感刷新。
+- **动态自适应滤镜名称与帮助指南 (`getFilterName` / `getFilterGuide`)**:
+  - 滤镜槽位与浮层提示支持三态自动匹配：
+    - `pop-color`：`Ricoh GR Positive Film` / `理光 GR 正片` / `理光 GR 正片`
+    - `retro-photo`：`Ricoh Negative Film` / `理光 負片` / `理光 负片`
+    - `richtone-mono`：`High Contrast B&W` / `高對比黑白` / `高对比黑白`
+    - `rough-mono`：`Moriyama Daido B&W` / `森山大道風` / `森山大道风`
+    - `watercolor`：`Cross Process` / `正負逆沖` / `正负逆冲`
+- **UI 界面动态标题绑定**:
+  - 取景界面顶部 OSD 标题（`AppNameView`）与选项菜单顶部标题（`mScreenTitle`）均动态绑定至 `RicohHook.getAppTitle()`，显示为 `Ricoh Camera`、`理光相機` 或 `理光相机`。
+- **系统级桌面应用图标三态本地化 (`resources.arsc`)**:
+  - 资源字符串池精准匹配：繁体中文系统显示「理光相機」、简体中文系统显示「理光相机」、英文及其他 30 余种语言统一显示「Ricoh Camera」。
 
 #### 📦 附件说明
 - `PictureEffectPlus_Ricoh.apk`：已签名并验证通过的正式安装包（集成 Android 4.1.2 兼容的 v1/v2/v3 签名）。
@@ -46,7 +44,7 @@ DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod)
 ```
 """
 
-def publish_release(token, tag="v1.2.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v1.3.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 

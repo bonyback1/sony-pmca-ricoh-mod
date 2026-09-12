@@ -8,10 +8,13 @@ def pts_to_bytes(pts):
         b.append((v >> 8) & 0xff)
     return b
 
-def make_filmic_curve(slope=1.2, toe_lift=0, shoulder_max=1023, center=0.5):
+def make_filmic_curve(slope=1.2, toe_lift=0, shoulder_max=1023, center=0.5, ev_offset=0.0):
+    factor = math.pow(2.0, ev_offset)
     pts = []
     for i in range(1024):
-        t = i / 1023.0
+        # Linear exposure scaling baked directly into tone curve
+        t_raw = (i / 1023.0) * factor
+        t = min(1.0, max(0.0, t_raw))
         if t < center:
             norm_t = t / center
             val = math.pow(norm_t, slope) * center
@@ -23,24 +26,24 @@ def make_filmic_curve(slope=1.2, toe_lift=0, shoulder_max=1023, center=0.5):
     return pts
 
 def gen_curve_pos():
-    # Ricoh GR Positive Film: gentle filmic S-curve, high shadow latitude (toe_lift=4, slope=1.22)
-    return make_filmic_curve(slope=1.22, toe_lift=4, shoulder_max=1020, center=0.48)
+    # Ricoh GR Positive Film: gentle filmic S-curve with -0.33 EV baked in for rich, dense positive film colors
+    return make_filmic_curve(slope=1.25, toe_lift=4, shoulder_max=1020, center=0.48, ev_offset=-0.33)
 
 def gen_curve_neg():
-    # Ricoh Negative Film: matte shadows (toe_lift=35), gentle contrast (slope=1.12), soft highlight shoulder
-    return make_filmic_curve(slope=1.12, toe_lift=35, shoulder_max=985, center=0.50)
+    # Ricoh Negative Film: lifted matte shadows (toe_lift=36), +0.33 EV baked in for soft airy look, gentle contrast
+    return make_filmic_curve(slope=1.08, toe_lift=36, shoulder_max=985, center=0.50, ev_offset=0.33)
 
 def gen_curve_hcbw():
     # Ricoh High Contrast B&W: punchy contrast (slope=1.85), deep rich blacks preserving dark textures
-    return make_filmic_curve(slope=1.85, toe_lift=0, shoulder_max=1023, center=0.50)
+    return make_filmic_curve(slope=1.85, toe_lift=0, shoulder_max=1023, center=0.50, ev_offset=0.0)
 
 def gen_curve_daido():
-    # Moriyama Daido: gritty, high-contrast graphic street B&W (slope=2.38)
-    return make_filmic_curve(slope=2.38, toe_lift=0, shoulder_max=1023, center=0.50)
+    # Moriyama Daido: gritty, high-contrast graphic street B&W (slope=2.38), -0.33 EV baked in
+    return make_filmic_curve(slope=2.38, toe_lift=0, shoulder_max=1023, center=0.50, ev_offset=-0.33)
 
 def gen_curve_xpro():
     # Ricoh Cross Process: vivid contrast with cross-process tones (slope=1.30, toe_lift=8)
-    return make_filmic_curve(slope=1.30, toe_lift=8, shoulder_max=1018, center=0.46)
+    return make_filmic_curve(slope=1.30, toe_lift=8, shoulder_max=1018, center=0.46, ev_offset=0.0)
 
 curves = {
     'pos': pts_to_bytes(gen_curve_pos()),
@@ -66,6 +69,9 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 .field private static final TAG:Ljava/lang/String; = "RicohHook"
 
 .field private static sIsRicohActive:Z
+.field private static sOriginalLB:I
+.field private static sOriginalCC:I
+.field private static sHasSavedOriginalWB:Z
 
 .field private static sGammaPos:[B
 .field private static sGammaNeg:[B
@@ -87,6 +93,9 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 
     const/4 v0, 0x0
     sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
 
     const/4 v0, 0x0
     sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sGammaPos:[B
@@ -97,12 +106,12 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 
     const/16 v0, 0x9
 
-    # 1. Positive Film Matrix
+    # 1. Positive Film Matrix (1148, -84, -40, -36, 1118, -58, -24, -68, 1116)
     new-array v1, v0, [I
     fill-array-data v1, :array_pos_matrix
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sPositiveFilmMatrix:[I
 
-    # 2. Negative Film Matrix
+    # 2. Negative Film Matrix (1046, -16, -6, -26, 1026, 24, -36, -16, 1076)
     new-array v1, v0, [I
     fill-array-data v1, :array_neg_matrix
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sNegativeFilmMatrix:[I
@@ -117,7 +126,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     fill-array-data v1, :array_daido_matrix
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sMoriyamaMatrix:[I
 
-    # 5. Cross Process Matrix
+    # 5. Cross Process Matrix (1130, -86, -20, 70, 1070, -116, -60, 30, 1054)
     new-array v1, v0, [I
     fill-array-data v1, :array_xpro_matrix
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCrossProcessMatrix:[I
@@ -131,28 +140,28 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 
     :array_pos_matrix
     .array-data 4
-        0x49c
-        -0x6e
-        -0x2e
-        -0x32
-        0x474
-        -0x42
-        -0x1e
-        -0x50
-        0x46e
+        0x47c
+        -0x54
+        -0x28
+        -0x24
+        0x45e
+        -0x3a
+        -0x18
+        -0x44
+        0x45c
     .end array-data
 
     :array_neg_matrix
     .array-data 4
-        0x410
-        -0xa
-        -0xa
-        -0x1e
-        0x3f2
-        0xa
-        -0x28
-        -0x14
-        0x3e8
+        0x416
+        -0x10
+        -0x6
+        -0x1a
+        0x402
+        0x18
+        -0x24
+        -0x10
+        0x434
     .end array-data
 
     :array_hcbw_matrix
@@ -183,15 +192,15 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 
     :array_xpro_matrix
     .array-data 4
-        0x47e
-        -0x64
+        0x46a
+        -0x56
+        -0x14
+        0x46
+        0x42e
+        -0x74
+        -0x3c
         0x1e
-        0x64
-        0x44c
-        -0x78
-        -0x50
-        0x32
-        0x406
+        0x41e
     .end array-data
 
     :array_id_matrix
@@ -460,6 +469,68 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     .end array-data
 .end method
 
+.method public static getWhitebalanceShiftLB(Ljava/lang/String;)I
+    .locals 1
+
+    const-string v0, "pop-color"
+    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_neg
+    const/4 v0, 0x2
+    return v0
+
+    :cond_neg
+    const-string v0, "retro-photo"
+    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_xpro
+    const/4 v0, 0x4
+    return v0
+
+    :cond_xpro
+    const-string v0, "watercolor"
+    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_zero
+    const/4 v0, -0x3
+    return v0
+
+    :cond_zero
+    const/4 v0, 0x0
+    return v0
+.end method
+
+.method public static getWhitebalanceShiftCC(Ljava/lang/String;)I
+    .locals 1
+
+    const-string v0, "pop-color"
+    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_neg
+    const/4 v0, -0x1
+    return v0
+
+    :cond_neg
+    const-string v0, "retro-photo"
+    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_xpro
+    const/4 v0, -0x2
+    return v0
+
+    :cond_xpro
+    const-string v0, "watercolor"
+    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_zero
+    const/4 v0, 0x2
+    return v0
+
+    :cond_zero
+    const/4 v0, 0x0
+    return v0
+.end method
+
 .method public static applyHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;Ljava/lang/String;)Z
     .locals 6
     .annotation system Ldalvik/annotation/Signature;
@@ -532,6 +603,48 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setDROMode(Ljava/lang/String;)V
     invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setHDRMode(Ljava/lang/String;)V
 
+    # Backup original user WB shifts on first apply
+    sget-boolean v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
+    if-nez v4, :cond_wb_saved
+
+    :try_start_wb_get
+    invoke-virtual {{v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getLightBalanceForWhiteBalance()I
+    move-result v4
+    sput v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
+
+    invoke-virtual {{v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getColorCompensationForWhiteBalance()I
+    move-result v4
+    sput v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
+
+    const/4 v4, 0x1
+    sput-boolean v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
+    :try_end_wb_get
+    .catch Ljava/lang/Throwable; {{:try_start_wb_get .. :try_end_wb_get}} :catch_wb_get
+
+    :cond_wb_saved
+    :goto_wb_apply
+    # Apply preset-specific hardware WB shifts
+    :try_start_wb_set
+    invoke-static {{p2}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getWhitebalanceShiftLB(Ljava/lang/String;)I
+    move-result v4
+    invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setLightBalanceForWhiteBalance(I)V
+
+    invoke-static {{p2}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getWhitebalanceShiftCC(Ljava/lang/String;)I
+    move-result v4
+    invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorCompensationForWhiteBalance(I)V
+    :try_end_wb_set
+    .catch Ljava/lang/Throwable; {{:try_start_wb_set .. :try_end_wb_set}} :catch_wb_set
+
+    goto :goto_matrix
+
+    :catch_wb_get
+    move-exception v4
+    goto :goto_wb_apply
+
+    :catch_wb_set
+    move-exception v4
+
+    :goto_matrix
     invoke-virtual {{v2, v3}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setRGBMatrix([I)V
 
     :cond_4
@@ -647,6 +760,25 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
     invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
     invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
+
+    # Restore original user WB shift
+    sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
+    if-eqz v2, :cond_wb_reset
+
+    :try_start_wb_res
+    sget v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
+    invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setLightBalanceForWhiteBalance(I)V
+
+    sget v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
+    invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorCompensationForWhiteBalance(I)V
+
+    const/4 v2, 0x0
+    sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
+    :try_end_wb_res
+    .catch Ljava/lang/Throwable; {{:try_start_wb_res .. :try_end_wb_res}} :catch_wb_res
+
+    :cond_wb_reset
+    :goto_wb_done
     invoke-virtual {{v0, p1}}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->setParameters(Landroid/util/Pair;)V
 
     :cond_3
@@ -656,6 +788,10 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     .catch Ljava/lang/Throwable; {{:try_start_0 .. :try_end_0}} :catch_0
 
     return-void
+
+    :catch_wb_res
+    move-exception v2
+    goto :goto_wb_done
 
     :catch_0
     move-exception v0

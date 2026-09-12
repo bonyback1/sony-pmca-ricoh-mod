@@ -15,23 +15,27 @@ import argparse
 REPO = "bonyback1/sony-pmca-ricoh-mod"
 API_URL = f"https://api.github.com/repos/{REPO}/releases"
 
-DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.1.4 (B1.4) 发布
+DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.2.0 (B2.0) 发布
 
-本版本深度对照索尼官方 PMCA 架构开发圣经（Bible.md）全栈规范，修复了底层 Native 硬件内存泄漏与参数级联覆盖等系统级隐患，并消除了转动拨轮切换滤镜时的取景器黑闪与迟滞。
+本版本正式落地理光 GR3 胶片色彩科学深度重构（第一阶段）：引入硬件级白平衡偏移注入与现场保护、Gamma 曲线内嵌曝光补偿烘焙，以及全新的行和归一化高低光分色 3×3 矩阵。
 
 #### 🌟 核心更新与调优
-- **彻底杜绝 Native DeviceBuffer DMA 硬件内存泄漏**：
-  - 依据规范，`CameraEx$GammaTable` 是底层通过 `/dev/video*` 直接分配的 Linux 内核物理 DMA 内存。此前写入 HAL 后缺失显式 `release()`，且在每次关闭菜单、按 Fn 调 ISO 或按回放查看照片返回取景器时均被触发，高频操作会耗尽缓冲池。
-  - 在 `RicohHook.applyHook` 中加入严格的 `try-finally` 硬件保护，向 HAL 提交后立即释放 `table.release()`，确保整机全天候拍摄绝不死机或冻结取景器。
-- **重构为单次原子参数提交（杜绝机身历史设置冲掉 0 偏移）**：
-  - 彻底剔除跨单例调用 `CreativeStyleController.setValue` 与 `DROAutoHDRController.setValue` 引发的级联 IPC；
-  - 直接在单一 `ParametersModifier` 中一步到位设置中性标准风格、0 对比度/饱和度/锐度、DRO/HDR 禁用、色彩矩阵与特效关闭，并执行单次原子提交。
-- **拨轮切换滤镜消除取景器闪黑与 IPC 减负**：
-  - 在 `setPlusPictureEffect` 入口处注入智能分发：在 5 款理光胶片预设之间转动拨轮切换时，跳过清空曲线与单位阵的中间过渡步骤，直接原子覆盖目标色彩，彻底消除 EVF/LCD 画面黑闪跳色，切换响应更迅捷。
-- **色彩矩阵重置硬件旁路（降低发热与功耗）**：
-  - 在 `resetHook` 中，将重置写入对角 1024 阵改为向 HAL 传入 `null`，让 BIONZ X 处理器直接 bypass 矩阵乘法器硬件，更省电。
-- **字面量修正**：
-  - 修正森山大道风引导词中的汉字笔误（“森山大道风粗粝高对比黑白”）。
+- **硬件级白平衡偏移注入与用户现场彻底恢复 (Hardware White Balance Shifts)**:
+  - 针对理光 GR3 直出色彩底层物理特性，在 `RicohHook` 中深度注入硬件级白平衡偏移调用：`setLightBalanceForWhiteBalance`（LB 琥珀/蓝色温偏置，范围 $[-14, +14]$）与 `setColorCompensationForWhiteBalance`（CC 绿色/洋红色彩补偿，范围 $[-14, +14]$）。
+  - **理光 GR 正片**: 注入 $LB=+2$ (琥珀暖调), $CC=-1$ (微洋红补偿)，重现理光 GR3 正片特有的暖阳色底。
+  - **理光负片**: 注入 $LB=+4$ (明显暖琥珀), $CC=-2$ (品红微调)，打造泛黄暖调的胶片底色。
+  - **正负逆冲**: 注入 $LB=-3$ (冷青蓝), $CC=+2$ (显色绿调)，呈现戏剧化冷冲印风格。
+  - **黑白滤镜**: 保持 $LB=0, CC=0$ 原生灰度平衡。
+  - **用户原生现场保护与零残留恢复**: 首次激活滤镜时自动保存用户原先设置的相机白平衡偏移，在切换或退出应用时精准还原，杜绝机身全局色彩污染。
+- **1024 阶 10-bit Gamma 曲线内嵌曝光补偿烘焙 (EV-Baking Tone Curves)**:
+  - 避开调用 `setExposureCompensation()` 对机身物理曝光拨盘与测光标尺的干扰，直接将感光量比率 $2^{\Delta \text{EV}}$ 烘焙入 1024 点 10-bit 非线性 Gamma 表：
+    - **理光 GR 正片**: 内嵌 -0.33 EV 曝光压暗烘焙，有效压制高光死白，增强天空蓝与高光浓郁色彩厚度。
+    - **森山大道风**: 内嵌 -0.33 EV 曝光压暗烘焙，加剧强反差街头黑白张力。
+    - **理光负片**: 内嵌 +0.33 EV 曝光提亮烘焙，配合哑光黑位抬升，模拟负片超大宽容度的高光滚降与通透柔和暗部。
+- **全新高低光分色校准 3×3 颜色矩阵 (Split-Toning Normalized Matrices)**:
+  - 重新优化并应用严格行和归一化（$\sum_j M_{ij} = 1024$）的 Q10 矩阵，灰阶无色偏。
+  - 依托 BIONZ X ISP 的「RAW Bayer $\rightarrow$ 前置 WB 偏移 $\rightarrow$ Demosaic $\rightarrow$ 1024阶非线性 Gamma $\rightarrow$ 后置 3×3 色彩矩阵」管线机制：
+    - 前置 WB 注入暖调，进入非线性 S 曲线后高低光自然解耦，后置矩阵对高光压制多余洋红并强化青绿饱和度，首次在索尼微单上完美重现理光 GR3 特有的**「暗部偏冷青、亮部微泛琥珀」高低光分色 (Split Toning)**。
 
 #### 📦 附件说明
 - `PictureEffectPlus_Ricoh.apk`：已签名并验证通过的正式安装包（集成 Android 4.1.2 兼容的 v1/v2/v3 签名）。
@@ -42,7 +46,7 @@ DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod)
 ```
 """
 
-def publish_release(token, tag="v1.1.4", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v1.2.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 
@@ -52,7 +56,7 @@ def publish_release(token, tag="v1.1.4", apk_path="PictureEffectPlus_Ricoh.apk",
         "User-Agent": "Sony-PMCA-Publisher"
     }
 
-    title = title or f"{tag} (B1.4) - 基于PMCA开发圣经的架构加固与内存防崩"
+    title = title or f"{tag} (B2.0) - 理光色彩科学第一阶段重构：硬件白平衡偏移、Gamma内嵌曝光补偿与高低光分色矩阵"
     body = body or DEFAULT_BODY
 
     # 1. Check if release already exists for this tag

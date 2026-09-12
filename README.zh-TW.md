@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.2.0--B2.0-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.3.0--B2.1-orange?style=flat-square" alt="Version">
 </p>
 
 透過底層硬體 ISP Hook 逆向工程技術，將索尼官方「相片效果+ (Picture Effect+)」應用深度改造為原生級**「理光相機」**。直接將理光 GR 經典底片色彩的 **前置硬體白平衡偏移 (WB Shift)、1024 階非線性 Gamma 曲線 (內嵌 EV 補償) 與 3×3 RGB 顏色矩陣** 協同寫入相機底層硬體暫存器，重現理光 GR 經典的高低光分色 (Split Toning) 與底片色彩厚實感，實現**零快門延遲、EVF/LCD 即時取景無殘影、原生高速連拍**的直出底片體驗。
@@ -21,6 +21,12 @@
 
 - ⚡ **純硬體 ISP 即時管線**：
   直接呼叫索尼相機底層私有庫 `com.sony.scalar.hardware.CameraEx` 寫入硬體暫存器。拍照走 `SingleProcess` $\rightarrow$ `CameraEx.burstableTakePicture()`，不調用慢速 CPU RAW 顯影，對焦、快門、連拍、取景全部為原生零延遲體驗。
+- 🌐 **執行階段自適應多語言引擎 (Locale 自動感知)**：
+  - 基於 Android 底層 `Locale.getDefault()` 即時感知機身語言，無需安裝不同版本 APK。
+  - 應用程式桌面圖示、取景介面 OSD、設定選單、撥輪切換浮動提示與說明指南全自動無感切換：
+    - **英文/海外國際系統**：`Ricoh Camera`、`Ricoh GR Positive Film`、`Ricoh Negative Film`、`High Contrast B&W`、`Moriyama Daido B&W`、`Cross Process`
+    - **繁體中文系統 (台灣/香港)**：`理光相機`、`理光 GR 正片`、`理光 負片`、`高對比黑白`、`森山大道風`、`正負逆沖`
+    - **簡體中文系統 (大陸)**：`理光相机`、`理光 GR 正片`、`理光 负片`、`高对比黑白`、`森山大道风`、`正负逆冲`
 - 🌈 **真·理光高低光分色 (Split Toning) 與色彩重塑**：
   - **前置硬體 WB 偏移**：精準注入 LB (色溫/琥珀偏置) 與 CC (色彩補償)，賦予正片暖陽基底與負片泛黃溫潤底片底色，退出應用自動完美復位使用者原始 WB。
   - **1024 階 Gamma 內嵌 EV 烘焙**：正片與森山大道風內嵌 -0.33 EV 曝光壓暗烘焙壓制高光死白，負片內嵌 +0.33 EV 提亮配合暗部抬升模擬大寬容度負片質感。
@@ -32,7 +38,6 @@
   - **森山大道風 (Moriyama Daido Style)**：強紅鏡黑白通道加權，壓暗天空，強化粗粝顆粒感與極致黑白張力。
   - **正負逆沖 (Cross Process)**：戲劇化色彩偏移曲線，暗部偏青/洋紅，亮部泛黃綠。
 - 🔄 **硬體色彩復位保障**：切換濾鏡或退出應用程式時，自動復位單位矩陣、白平衡偏移及預設 Gamma 表，徹底防止相機機身色彩殘留或色偏。
-- 📱 **深度擬物介面與中文化**：相機應用清單顯示為「理光相機」，各級選單完整中文化，原生轉盤即切即拍。
 
 ---
 

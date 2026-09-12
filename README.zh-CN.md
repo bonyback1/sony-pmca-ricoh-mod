@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.2.0--B2.0-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.3.0--B2.1-orange?style=flat-square" alt="Version">
 </p>
 
 通过底层硬件 ISP Hook 逆向技术，将索尼官方「照片效果+ (Picture Effect+)」应用深度改造为原生级**「理光相机」**。直接将理光 GR 经典胶片色彩的 **前置硬件白平衡偏置 (WB Shift)、1024 阶非线性 Gamma 曲线 (内嵌 EV 补偿) 与 3×3 RGB 颜色矩阵** 协同写入相机底层硬件寄存器，重现理光 GR 经典的高低光分色 (Split Toning) 与胶片色彩厚重感，实现**零快门延迟、EVF/LCD 实时取景无拖影、原生高速连拍**的直出胶片体验。
@@ -21,18 +21,23 @@
 
 - ⚡ **纯硬件 ISP 实时管线**：
   直接调用索尼相机底层私有库 `com.sony.scalar.hardware.CameraEx` 写入硬件寄存器。拍照走 `SingleProcess` $\rightarrow$ `CameraEx.burstableTakePicture()`，不调用慢速 CPU RAW 显影，对焦、快门、连拍、取景全部为原生无延迟体验。
+- 🌐 **运行时自适应多语言引擎 (Locale 自动感知)**：
+  - 基于 Android 底层 `Locale.getDefault()` 实时感知机身语言，无需安装不同版本 APK。
+  - 应用桌面图标、取景界面 OSD、设置菜单、波轮切换浮动提示与帮助说明全自动无感切换：
+    - **英文/海外国际系统**：`Ricoh Camera`、`Ricoh GR Positive Film`、`Ricoh Negative Film`、`High Contrast B&W`、`Moriyama Daido B&W`、`Cross Process`
+    - **繁體中文系统 (台灣/香港)**：`理光相機`、`理光 GR 正片`、`理光 負片`、`高對比黑白`、`森山大道風`、`正負逆沖`
+    - **简体中文系统 (大陆)**：`理光相机`、`理光 GR 正片`、`理光 负片`、`高对比黑白`、`森山大道风`、`正负逆冲`
 - 🌈 **真·理光高低光分色 (Split Toning) 与色彩重塑**：
   - **前置硬件 WB 偏移**：精准注入 LB (色温/琥珀偏置) 与 CC (色彩补偿)，赋予正片暖阳基底与负片泛黄温和胶片底色，退出应用自动完美复位用户原始 WB。
   - **1024 阶 Gamma 内嵌 EV 烘焙**：正片与森山大道风内嵌 -0.33 EV 曝光压暗烘焙压制高光死白，负片内嵌 +0.33 EV 提亮配合黑位抬升模拟大宽容度负片质感。
   - **行和归一化 3×3 颜色矩阵**：结合前置 WB 与非线性 S 曲线，实现「暗部冷青、高光暖琥珀」的理光 GR3 经典分色。
 - 🎨 **内嵌 5 款经典理光/街头胶片滤镜**：
   - **理光 GR 正片 (Ricoh Positive Film)**：真实理光 GR 正片色彩，解耦相机自带风格，高饱和青蓝天空与黄绿草木，温和胶片反差，暗部层次细腻丰富无死黑。
-  - **理光负片 (Ricoh Negative Film)**：胶片哑光曲线，黑位抬升至 35，柔和低对比微泛暖调，高光优雅滚降。
+  - **理光 负片 (Ricoh Negative Film)**：胶片哑光曲线，黑位抬升至 36，柔和低对比微泛暖调，高光优雅滚降。
   - **高对比黑白 (High Contrast B&W)**：精准 BT.601 亮度灰度转换，大 S 反差曲线，呈现油墨般深邃质感。
   - **森山大道风 (Moriyama Daido Style)**：强红镜黑白通道加权，压暗天空，强化粗粝颗粒感与极致黑白张力。
   - **正负逆冲 (Cross Process)**：戏剧化色彩偏移曲线，暗部偏青/洋红，亮部泛黄绿。
 - 🔄 **硬件色彩复位保障**：切换滤镜或退出应用时，自动复位单位矩阵、白平衡偏移及默认 Gamma 表，彻底防止相机机身色彩残留或偏色。
-- 📱 **深度拟物界面与汉化**：相机应用列表显示为「理光相机」，各级菜单完整汉化，原生波轮即切即拍。
 
 ---
 

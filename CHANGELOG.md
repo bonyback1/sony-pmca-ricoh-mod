@@ -1,33 +1,61 @@
 # Changelog
 
+<p align="center">
+  <strong>English</strong> |
+  <strong><a href="CHANGELOG.zh-CN.md">简体中文</a></strong> |
+  <strong><a href="CHANGELOG.zh-TW.md">繁體中文</a></strong>
+</p>
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-09-12 (B2.1)
+
+### Added & Enhanced (Runtime Adaptive Multi-Language Engine)
+- **Zero-Configuration Runtime Locale Auto-Perception (`RicohHook.getLanguageType`)**:
+  - Implemented dynamic runtime locale detection using Android's underlying `Locale.getDefault()`.
+  - Automatically identifies whether the camera firmware is running in **English / Global (0)**, **Traditional Chinese (1, Taiwan / Hong Kong / Macau)**, or **Simplified Chinese (2, Mainland China)** with zero manual configuration.
+- **Dynamic Localized Presets & Guides (`getFilterName` & `getFilterGuide`)**:
+  - Dynamically switches filter names on the fly across in-camera menus, floating OSD badges, and dial scrolling:
+    - **`pop-color`**: `Ricoh GR Positive Film` / `理光 GR 正片` / `理光 GR 正片`
+    - **`retro-photo`**: `Ricoh Negative Film` / `理光 負片` / `理光 负片`
+    - **`richtone-mono`**: `High Contrast B&W` / `高對比黑白` / `高对比黑白`
+    - **`rough-mono`**: `Moriyama Daido B&W` / `森山大道風` / `森山大道风`
+    - **`watercolor`**: `Cross Process` / `正負逆沖` / `正负逆冲`
+  - Dynamically localizes detailed guide texts (`getMenuItemGuideText`) for all 5 presets.
+- **Dynamic App Title Binding in UI**:
+  - Bound shooting OSD overlay title (`AppNameView`) and option menu header (`mScreenTitle`) dynamically to `RicohHook.getAppTitle()`, showing `Ricoh Camera`, `理光相機`, or `理光相机`.
+- **Tri-State `resources.arsc` Launcher Localization**:
+  - Repacked global resource string pool to map camera system launcher entries:
+    - Traditional Chinese: `理光相機`
+    - Simplified Chinese: `理光相机`
+    - English and 30+ other international camera languages: `Ricoh Camera`
+
 ## [1.2.0] - 2026-09-12 (B2.0)
 
 ### Added & Enhanced (Ricoh GR III Color Science Overhaul - Phase 1)
-- **硬件级白平衡偏移注入与现场保存/恢复 (Hardware White Balance Shifts)**:
-  - 针对理光 GR3 胶片色调底层物理特性，在 `RicohHook` 中深度注入硬件级白平衡偏移调用：`setLightBalanceForWhiteBalance`（LB 琥珀/蓝色温偏置，范围 $[-14, +14]$）与 `setColorCompensationForWhiteBalance`（CC 绿色/洋红色彩补偿，范围 $[-14, +14]$）。
-  - **理光 GR 正片**: 注入 $LB=+2$ (琥珀暖调), $CC=-1$ (微洋红补偿)，重现理光 GR3 正片特有的暖阳色底。
-  - **理光负片**: 注入 $LB=+4$ (明显暖琥珀), $CC=-2$ (品红微调)，打造泛黄暖调的胶片底色。
-  - **正负逆冲**: 注入 $LB=-3$ (冷青蓝), $CC=+2$ (显色绿调)，呈现戏剧化冷冲印风格。
-  - **黑白滤镜**: 保持 $LB=0, CC=0$ 原生灰度平衡。
-  - **用户原生现场保护与零残留恢复**: 首次激活滤镜时自动保存用户原先设置的相机白平衡偏移，在切换或退出应用时精准还原，杜绝机身全局色彩污染。
-- **1024 阶 10-bit Gamma 曲线内嵌曝光补偿烘焙 (EV-Baking Tone Curves)**:
-  - 避开调用 `setExposureCompensation()` 对机身物理曝光拨盘与测光标尺的干扰，直接将感光量比率 $2^{\Delta \text{EV}}$ 烘焙入 1024 点 10-bit 非线性 Gamma 表：
-    - **理光 GR 正片**: 内嵌 -0.33 EV 曝光压暗烘焙，有效压制高光死白，增强天空蓝与高光浓郁色彩厚度。
-    - **森山大道风**: 内嵌 -0.33 EV 曝光压暗烘焙，加剧强反差街头黑白张力。
-    - **理光负片**: 内嵌 +0.33 EV 曝光提亮烘焙，配合哑光黑位抬升，模拟负片超大宽容度的高光滚降与通透柔和暗部。
-- **全新高低光分色校准 3×3 颜色矩阵 (Split-Toning Normalized Matrices)**:
-  - 重新优化并应用严格行和归一化（$\sum_j M_{ij} = 1024$）的 Q10 矩阵，灰阶无色偏。
-  - 依托 BIONZ X ISP 的「RAW Bayer $\rightarrow$ 前置 WB 偏移 $\rightarrow$ Demosaic $\rightarrow$ 1024阶非线性 Gamma $\rightarrow$ 后置 3×3 色彩矩阵」管线机制：
-    - 前置 WB 注入暖调，进入非线性 S 曲线后高低光自然解耦，后置矩阵对高光压制多余洋红并强化青绿饱和度，首次在索尼微单上完美重现理光 GR3 特有的**「暗部偏冷青、亮部微泛琥珀」高低光分色 (Split Toning)**。
+- **Pre-ISP Hardware White Balance Shift Injection & Safe State Restoration**:
+  - Leverages Sony's private hardware white balance offset APIs within `RicohHook`: `setLightBalanceForWhiteBalance` (LB amber/blue temperature bias, range $[-14, +14]$) and `setColorCompensationForWhiteBalance` (CC green/magenta compensation, range $[-14, +14]$).
+  - **Ricoh Positive Film**: Injects $LB=+2$ (amber warmth) and $CC=-1$ (subtle magenta tint), recreating the signature warm sunny base of Ricoh GR3 slide film.
+  - **Ricoh Negative Film**: Injects $LB=+4$ (pronounced warm amber) and $CC=-2$ (magenta nuance), crafting a gentle yellowish vintage film base.
+  - **Cross Process**: Injects $LB=-3$ (cool cyan-blue) and $CC=+2$ (emerald green), producing a dramatic cross-processed look.
+  - **Monochrome Presets**: Maintains $LB=0, CC=0$ for neutral grayscale balance.
+  - **User State Preservation & Zero-Residue Recovery**: Automatically snapshots user's preexisting camera WB offsets upon first activation and restores them cleanly upon switching filters or exiting, eliminating persistent color contamination.
+- **1024-Point 10-bit Gamma Curves with Baked EV Compensation**:
+  - Bypasses `setExposureCompensation()` to avoid interfering with physical camera dials and exposure meters; directly bakes the $2^{\Delta \text{EV}}$ sensitivity ratio into 1024-point non-linear Gamma lookup tables:
+    - **Ricoh Positive Film**: Bakes -0.33 EV under-exposure to suppress blown highlights and enrich sky blue and highlight saturation.
+    - **Moriyama Daido Style**: Bakes -0.33 EV under-exposure to amplify graphic black-and-white street contrast.
+    - **Ricoh Negative Film**: Bakes +0.33 EV over-exposure combined with matte shadow floor lift (~35) to replicate wide negative film latitude and soft shadow tonality.
+- **Split-Toning Calibrated 3×3 Color Matrices**:
+  - Re-optimized and applied row-sum normalized ($\sum_j M_{ij} = 1024$) Q10 matrices, ensuring unshifted neutral grays.
+  - Capitalizes on the BIONZ X ISP pipeline (*RAW Bayer $\rightarrow$ Pre-WB Shift $\rightarrow$ Demosaic $\rightarrow$ 1024-Point Non-linear Gamma $\rightarrow$ Post 3×3 Matrix*):
+    - Pre-WB introduces warmth before entering non-linear S-curves, naturally decoupling shadows and highlights; post-matrix dampens excess highlight magenta and boosts foliage greens, perfectly achieving Ricoh GR3's hallmark **"Cool cyan shadows, warm amber highlights" (Split Toning)** on Sony cameras.
 
 ## [1.1.4] - 2026-09-11 (B1.4)
 
-### Fixed & Enhanced (Architectural Hardening based on PMCA Bible.md)
+### Fixed & Enhanced (Architectural Hardening based on PMCA Bible)
 - **Eliminated Native `DeviceBuffer` DMA Memory Leak**:
   - In `RicohHook.applyHook`, immediately invokes `GammaTable.release()` after calling `CameraEx.setExtendedGammaTable()`.
   - Added strict `try-finally` exception protection ensuring the 2KB native DMA device buffer is unconditionally released back to the Linux kernel/V4L2 hardware driver even on exceptions.
@@ -47,16 +75,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.3] - 2026-09-10 (B1.3)
 
 ### Fixed & Enhanced
-- **Decoupled Filter Baseline from Camera Creative Style (Fix "Clear" / 清澈 Style Superposition)**:
-  - Resolved issue where Ricoh presets inherited and superimposed with the camera's native Creative Style (创意风格, e.g. "Clear" / 清澈, "Vivid", or user contrast offsets).
+- **Decoupled Filter Baseline from Camera Creative Style (Fix "Clear" Style Superposition)**:
+  - Resolved issue where Ricoh presets inherited and superimposed with the camera's native Creative Style (e.g. "Clear", "Vivid", or user contrast offsets).
   - In `RicohHook.applyHook`, explicitly enforces `CameraEx$ParametersModifier.setColorMode("standard")`, resets contrast/saturation/sharpness offsets to 0, and synchronizes `CreativeStyleController` and `DROAutoHDRController`.
   - Guarantees 100% pure, consistent color pipeline independent of pre-existing camera menu styles.
 - **Redesigned Filmic Gamma Curves for All 5 Presets (Eliminate Harsh Contrast & Crushed Shadows)**:
-  - **理光 GR 正片 (Ricoh Positive Film)**: Replaced steep sigmoid ($k=8.0$, midtone slope 2.06) with natural filmic curve (midtone slope ~1.25, toe lift to protect shadows from input 64: 14 -> 45, smooth highlight shoulder to 1020). Restores authentic Ricoh GR positive film color tone, transparent shadows, and rich dynamic range.
-  - **理光负片 (Ricoh Negative Film)**: Softened midtone contrast (slope ~1.08), preserved matte black shadow lift (35) and rolled-off highlights (985) for classic vintage film mood.
-  - **高对比黑白 (Ricoh High Contrast B&W)**: Adjusted contrast slope from 2.75 to 1.81, retaining punchy graphic blacks while recovering fine asphalt/dark textures from digital black clipping.
-  - **森山大道风 (Moriyama Daido Rough B&W)**: Rebalanced slope from 3.94 (binary-like thresholding) to 2.38, preserving harsh street noir look with actual edge and structure rendition.
-  - **正负逆冲 (Ricoh Cross Process)**: Adjusted midtone slope to 1.25 with toe lift 8, providing clean cross-processing color shifts without muddy shadows.
+  - **Ricoh Positive Film**: Replaced steep sigmoid ($k=8.0$, midtone slope 2.06) with natural filmic curve (midtone slope ~1.25, toe lift to protect shadows from input 64: 14 -> 45, smooth highlight shoulder to 1020). Restores authentic Ricoh GR positive film color tone, transparent shadows, and rich dynamic range.
+  - **Ricoh Negative Film**: Softened midtone contrast (slope ~1.08), preserved matte black shadow lift (35) and rolled-off highlights (985) for classic vintage film mood.
+  - **Ricoh High Contrast B&W**: Adjusted contrast slope from 2.75 to 1.81, retaining punchy graphic blacks while recovering fine textures from digital black clipping.
+  - **Moriyama Daido Rough B&W**: Rebalanced slope from 3.94 (binary-like thresholding) to 2.38, preserving harsh street noir look with actual edge and structure rendition.
+  - **Ricoh Cross Process**: Adjusted midtone slope to 1.25 with toe lift 8, providing clean cross-processing color shifts without muddy shadows.
 - **Clean Neutral Reset**:
   - `RicohHook.resetHook` safely restores standard color mode and 0-offsets when exiting or switching presets.
 
@@ -64,19 +92,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed & Enhanced
 - **Clean Exit & Lifecycle Management (Fix Exit Loop / Re-entry Bug)**:
-  - Fixed root cause where clicking "退出应用程序" (Exit application) caused the app to repeatedly restart or bounce back into the app instead of returning cleanly to native camera shooting mode or app launcher.
+  - Fixed root cause where clicking "Exit application" caused the app to repeatedly restart or bounce back into the app instead of returning cleanly to native camera shooting mode or app launcher.
   - Injected resume information reset in `AppRoot.finish(FINISH_TYPE)`: sends broadcast resetting active application to `ScalarALauncher` and clearing `resume_key` and `pullingback_key`, ensuring `DAConnectionManagerService` will not resurrect `PictureEffectPlus` upon hardware/sensor state transitions.
   - Injected `Activity.finish()` in `AppRoot.finish(FINISH_TYPE)` so the Android Activity is cleanly finished and destroyed by ActivityManagerService instead of lingering in the task stack as `PAUSED`.
   - Injected `android.os.Process.killProcess(Process.myPid())` in `AppRoot.onDestroy()` for clean termination and memory reclamation.
-  - Preserved power switch sleep/wake resume behavior while shooting (powering off and on while shooting still stays in the app).
+  - Preserved power switch sleep/wake resume behavior while shooting.
 
 ## [1.1.1] - 2026-09-09 (B1.1)
 
 ### Fixed & Enhanced
-- **Default Startup Filter (理光 GR 正片)**:
+- **Default Startup Filter (Ricoh GR Positive Film)**:
   - Fixed an issue where the app stayed on a later legacy filter (`part-color-plus` at index 5) due to stale camera flash storage.
-  - Added preset validation in `PictureEffectPlusController.getBackupEffectValue`: non-Ricoh or legacy values automatically fallback to `pop-color` (理光 GR 正片) and repair flash storage.
-  - Injected cold boot reset in `PictureEffectPlus.onBoot` (`BootFactor.LUNCHER`): launching the app from the camera application list now unconditionally defaults to the first filter (理光 GR 正片, index 0).
+  - Added preset validation in `PictureEffectPlusController.getBackupEffectValue`: non-Ricoh or legacy values automatically fallback to `pop-color` (Ricoh Positive Film) and repair flash storage.
+  - Injected cold boot reset in `PictureEffectPlus.onBoot` (`BootFactor.LUNCHER`): launching the app from the camera application list now unconditionally defaults to the first filter (Ricoh Positive Film, index 0).
   - Preserved active shooting filters across camera sleep/power cycling (`BootFactor.POWERON` / `BootFactor.APO`).
 - **Key & Navigation Compatibility**:
   - Center button keycode `0xe8` bypasses custom key mapping interception to ensure reliable menu triggering and filter selection.
@@ -93,26 +121,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dynamic Text & Guide Hooks**:
   - Implemented `getFilterName` and `getFilterGuide` hooks in `RicohHook` and `BaseMenuService` for dynamic in-camera title and guide text.
 - **UI & Layout Enhancements**:
-  - Default startup effect changed to `pop-color` (理光 GR 正片) in `PictureEffectPlusOptionMenuLayout`.
+  - Default startup effect changed to `pop-color` (Ricoh Positive Film) in `PictureEffectPlusOptionMenuLayout`.
   - Added null safety guards in `getLastStoredValues` and `setPreviousMenuID` to prevent potential NPE crashes.
-  - Added binary string pool patcher for `resources.arsc` to ensure "理光相机" system-wide display name consistency.
+  - Added binary string pool patcher for `resources.arsc` to ensure "Ricoh Camera" system-wide display name consistency.
   - Added key converter and S1 key handler compatibility patches.
 
 ## [1.0.0] - 2026-09-08
 
 ### Added
 - **5 Ricoh Film Presets**:
-  - `pop-color` -> **理光 GR 正片 (Ricoh Positive Film)**: High-contrast S-curve with signature GR saturation.
-  - `retro-photo` -> **理光负片 (Ricoh Negative Film)**: Lifted black point (matte shadows) with warm vintage highlights.
-  - `richtone-mono` -> **高对比黑白 (High Contrast B&W)**: BT.601 perceptual luminance weighting with steep monochrome curve.
-  - `rough-mono` -> **森山大道风 (Moriyama Daido Style)**: Aggressive red-filter channel weighting with high-grain contrast.
-  - `watercolor` -> **正负逆冲 (Cross Process)**: Dual-tone cyan/yellow-green curve shift.
+  - `pop-color` -> **Ricoh GR Positive Film**: High-contrast S-curve with signature GR saturation.
+  - `retro-photo` -> **Ricoh Negative Film**: Lifted black point (matte shadows) with warm vintage highlights.
+  - `richtone-mono` -> **High Contrast B&W**: BT.601 perceptual luminance weighting with steep monochrome curve.
+  - `rough-mono` -> **Moriyama Daido Style**: Aggressive red-filter channel weighting with high-grain contrast.
+  - `watercolor` -> **Cross Process**: Dual-tone cyan/yellow-green curve shift.
 - **Hardware ISP Direct Injection**:
   - Implemented `RicohHook` smali hook interfacing directly with `com.sony.scalar.hardware.CameraEx`.
   - Zero shutter lag, EVF real-time preview, and full hardware burst shooting capability (`burstableTakePicture`).
 - **Tooling & Automation**:
   - `tools/patch_apk.py`: Automated decompile, smali injection, title update, menu update, build, and sign toolchain.
-  - `tools/sign_apk.py`: Android 4.1.2 Apache Harmony compatible v1 signer (bypasses modern CMS attribute parsing bugs).
+  - `tools/sign_apk.py`: Android 4.1.2 Apache Harmony compatible v1 signer.
   - `tools/generate_ricoh_hook.py`: Gamma table (1024-point) & 3x3 color matrix smali generator.
   - `tools/update_menu_data.py`: Dynamic `MenuData.xml` filter descriptor patcher.
   - `scripts/install.sh`: Interactive Wi-Fi ADB installer with auto-detection and troubleshooting hints.

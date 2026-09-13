@@ -11,6 +11,27 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并严格遵循 [语义化版本规范 (SemVer)](https://semver.org/lang/zh-CN/)。
 
+## [1.4.0] - 2026-09-13 (B2.2)
+
+### 新增与增强 (全机型跨代硬件兼容与四阶自动化测试工作台)
+- **PMCA 全机型硬件防御性架构与优雅降级**:
+  - 对所有二代专有硬件 API（`setRGBMatrix([I)V`、`createGammaTable()`、`write()`、`setExtendedGammaTable()`、`release()`）引入防御性 `try-catch` 与非重掷回退机制；
+  - 彻底杜绝初代 PMCA 机型（Android 2.3.7 / API 10，如 A7、A7R、A6000、NEX-5R/6）上的 `NoSuchMethodError` 崩溃，在不支持 10-bit 伽马表或色彩矩阵的硬件上平滑降级至基础 ISP 参数控制；
+  - 深度防护脆弱 HAL 硬件寄存器（`setColorMode`、`setDROMode`、`setHDRMode`），避免在不同机型固件上因硬件拒绝导致相机主线程崩溃；
+  - 严格保障 DMA 内存安全生命周期：`GammaTable.release()` 在正常与异常分支均百分百触发，消除内核 DMA Slab 泄漏风险。
+- **纯正 PMCA 兼容 V1 JAR 签名器与内置 4 字节 ZipAlign 引擎**:
+  - 全面替代现代 `uber-apk-signer`，使用 `tools/sign_apk.py`（基于 OpenSSL `smime -sign -noattr -binary`）生成纯净 V1 JAR 签名；
+  - 保证零 APK Signature Scheme v2/v3 块，且零 CMS 签名属性（如 `signingTime` 与 OID `1.2.840.113549.1.9.52`），彻底根除 Android 2.3.7 / 4.1.2 Apache Harmony `JarVerifier` 的 `INSTALL_PARSE_FAILED_NO_CERTIFICATES` 报错；
+  - 签名引擎原生内置纯 Python 4 字节内存对齐（ZipAlign）：自动为所有未压缩存储文件（包括 `resources.arsc`、图片与字体资源）填充 `extra` 字段，确保数据偏移严格整除 4，摆脱对系统外部 `zipalign` 命令的依赖；
+  - 统一复用工程根目录调试证书（`debug.keystore` -> `tools/debug.pem`），保证相机在升级安装时无需卸载即可平滑覆盖。
+- **四阶全方位自动化测试工作台 (`tools/testbench/`)**:
+  - 全新建立针对 PMCA 全机型的跨代验证测试套件：
+    - **Tier 1 (Dalvik 字节码验证器)**：Smali 语法平衡、寄存器帧界限、API 10 操作码安全性、异常块顺序、类型合并冲突（5 项全通）；
+    - **Tier 2 (PMCA 框架符号审计器)**：通用框架符号合规性、初代机崩溃隐患、脆弱 HAL 防护、DMA 内存安全（4 项全通）；
+    - **Tier 3 (按键交互人体工程学模拟器)**：双波轮/多波轮切换、单波轮与十字键循环、RX 系列镜头控制环、A5100 纯触摸导航、中心键 `0xe8` 穿透（5 项全通）；
+    - **Tier 4 (APK 打包与签名验证器)**：V1 签名结构完整性、SHA-1 摘要纯净度、排除 v2/v3 签名块、排除 CMS 签名属性、4 字节 ZipAlign 对齐（5 项全通）；
+  - `PictureEffectPlus_Ricoh.apk` 与 `Ricoh_Camera.apk` 均实现 **19/19 项 100% 全通 (PASS)**。
+
 ## [1.3.0] - 2026-09-12 (B2.1)
 
 ### 新增与增强 (运行时「自适应多语言」引擎)

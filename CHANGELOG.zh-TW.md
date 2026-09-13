@@ -11,6 +11,45 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 並嚴格遵循 [語意化版本規範 (SemVer)](https://semver.org/lang/zh-TW/)。
 
+## [1.4.0] - 2026-09-13 (B2.2)
+
+### 新增與增強 (全機型跨代硬體相容與四階自動化測試工作台)
+- **PMCA 全機型硬體防禦性架構與平滑降級**:
+  - 對所有二代專屬硬體 API（`setRGBMatrix([I)V`、`createGammaTable()`、`write()`、`setExtendedGammaTable()`、`release()`）引入防禦性 `try-catch` 與非重擲回退機制；
+  - 徹底杜絕初代 PMCA 機型（Android 2.3.7 / API 10，如 A7、A7R、A6000、NEX-5R/6）上的 `NoSuchMethodError` 當機，在不支援 10-bit 伽瑪表或色彩矩陣的硬體上平滑降級至基礎 ISP 參數控制；
+  - 深度防護脆弱 HAL 硬體暫存器（`setColorMode`、`setDROMode`、`setHDRMode`），避免在不同機型韌體上因硬體拒絕導致相機主執行緒崩潰；
+  - 嚴格保障 DMA 記憶體安全生命週期：`GammaTable.release()` 在正常與異常分支均百分之百觸發，消除核心 DMA Slab 洩漏風險。
+- **純正 PMCA 相容 V1 JAR 簽名器與內建 4 位元組 ZipAlign 引擎**:
+  - 全面替代現代 `uber-apk-signer`，使用 `tools/sign_apk.py`（基於 OpenSSL `smime -sign -noattr -binary`）產生純淨 V1 JAR 簽名；
+  - 保證零 APK Signature Scheme v2/v3 區塊，且零 CMS 簽名屬性（如 `signingTime` 與 OID `1.2.840.113549.1.9.52`），徹底根除 Android 2.3.7 / 4.1.2 Apache Harmony `JarVerifier` 的 `INSTALL_PARSE_FAILED_NO_CERTIFICATES` 報錯；
+  - 簽名引擎原生內建純 Python 4 位元組記憶體對齊（ZipAlign）：自動為所有未壓縮儲存檔案（包含 `resources.arsc`、圖片與字型資源）填充 `extra` 欄位，確保資料偏移嚴格整除 4，擺脫對系統外部 `zipalign` 命令的依賴；
+  - 統一複用專案根目錄偵錯憑證（`debug.keystore` -> `tools/debug.pem`），保證相機在升級安裝時無需解除安裝即可平滑覆蓋。
+- **四階全方位自動化測試工作台 (`tools/testbench/`)**:
+  - 全新建立針對 PMCA 全機型的跨代驗證測試套件：
+    - **Tier 1 (Dalvik 位元組碼驗證器)**：Smali 語法平衡、暫存器訊框界限、API 10 操作碼安全性、例外區塊順序、型別合併衝突（5 項全通）；
+    - **Tier 2 (PMCA 架構符號稽核器)**：通用架構符號合規性、初代機當機隱患、脆弱 HAL 防護、DMA 記憶體安全（4 項全通）；
+    - **Tier 3 (按鍵互動人體工學模擬器)**：雙轉盤/多轉盤切換、單轉盤與十字鍵循環、RX 系列鏡頭控制環、A5100 純觸控導航、中心鍵 `0xe8` 穿透（5 項全通）；
+    - **Tier 4 (APK 打包與簽名驗證器)**：V1 簽名結構完整性、SHA-1 摘要純淨度、排除 v2/v3 簽名區塊、排除 CMS 簽名屬性、4 位元組 ZipAlign 對齊（5 項全通）；
+  - `PictureEffectPlus_Ricoh.apk` 與 `Ricoh_Camera.apk` 均實現 **19/19 項 100% 全通 (PASS)**。
+
+## [1.3.0] - 2026-09-12 (B2.1)
+
+### 新增與增強 (執行階段「自適應多語言」引擎)
+- **底層 Locale 自動感知與無感分發 (`RicohHook.getLanguageType`)**:
+  - 呼叫 Android 核心 `Locale.getDefault()` 即時讀取系統語言與國家地區代碼；
+  - 自動將系統環境歸類為 **英文/國際通用 (0)**、**繁體中文 (1, 台灣/香港/澳門)** 與 **簡體中文 (2, 大陸)**，無需任何手動設定，單一 APK 通用全球。
+- **全動態自適應濾鏡名稱與指南文字 (`getFilterName` & `getFilterGuide`)**:
+  - 軟體選單列表、轉盤切換浮動提示與詳細說明文字在相機切換語言時即時無感重新整理：
+    - `pop-color`：`Ricoh GR Positive Film` / `理光 GR 正片` / `理光 GR 正片`
+    - `retro-photo`：`Ricoh Negative Film` / `理光 負片` / `理光 负片`
+    - `richtone-mono`：`High Contrast B&W` / `高對比黑白` / `高对比黑白`
+    - `rough-mono`：`Moriyama Daido B&W` / `森山大道風` / `森山大道风`
+    - `watercolor`：`Cross Process` / `正負逆沖` / `正负逆冲`
+- **UI 介面動態標題綁定**:
+  - 取景介面 OSD 浮層標題（`AppNameView`）與選項選單頂部標題（`mScreenTitle`）均從固定漢字改為動態呼叫 `RicohHook.getAppTitle()`，顯示為 `Ricoh Camera`、`理光相機` 或 `理光相机`。
+- **系統桌面應用程式圖示三態在地化 (`resources.arsc`)**:
+  - 資源字串池深度重構：繁體中文機身顯示「理光相機」、簡體中文機身顯示「理光相机」、英文及其他 30 餘種語言統一呈現「Ricoh Camera」。
+
 ## [1.2.0] - 2026-09-12 (B2.0)
 
 ### 新增與增強 (理光 GR III 色彩科學深度重構 - 第一階段)

@@ -838,42 +838,9 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         unsigned_apk = os.path.join(work_dir, 'unsigned.apk')
         run_cmd(['apktool', 'b', work_dir, '-o', unsigned_apk])
 
-        # Step 7: Sign APK
-        print(f"==> [7/7] Signing APK -> {output_apk} ...")
-        uber_jar = os.path.join(PROJECT_ROOT, 'tools', 'uber-apk-signer.jar')
-        if not os.path.exists(uber_jar) and os.path.exists('/tmp/uber-apk-signer.jar'):
-            uber_jar = '/tmp/uber-apk-signer.jar'
-
-        signed = False
-        java_candidates = [
-            '/opt/homebrew/Cellar/openjdk/26.0.2.1/libexec/openjdk.jdk/Contents/Home/bin/java',
-            '/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home/bin/java',
-            '/opt/homebrew/bin/java',
-            shutil.which('java')
-        ]
-        java_bin = None
-        for jc in java_candidates:
-            if jc and os.path.isfile(jc) and os.access(jc, os.X_OK):
-                # Verify java actually works
-                try:
-                    res = subprocess.run([jc, '-version'], capture_output=True)
-                    if res.returncode == 0:
-                        java_bin = jc
-                        break
-                except Exception:
-                    pass
-
-        if os.path.exists(uber_jar) and java_bin:
-            try:
-                shutil.copyfile(unsigned_apk, output_apk)
-                run_cmd([java_bin, '-jar', uber_jar, '-a', os.path.abspath(output_apk), '--overwrite', '--allowResign'])
-                print(f"Successfully signed with uber-apk-signer -> {output_apk}")
-                signed = True
-            except Exception as e:
-                print(f"uber-apk-signer failed ({e}), falling back to sign_apk...")
-
-        if not signed:
-            sign_apk(unsigned_apk, output_apk, pem_path=custom_key)
+        # Step 7: Sign APK with pure V1 JAR signature and 4-byte zipalign
+        print(f"==> [7/7] Signing APK with PMCA-compliant V1 signer -> {output_apk} ...")
+        sign_apk(unsigned_apk, output_apk, pem_path=custom_key)
 
         print("\n" + "=" * 60)
         print("🎉 SUCCESS! Modded Ricoh Camera APK built successfully!")

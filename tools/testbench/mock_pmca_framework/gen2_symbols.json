@@ -1,0 +1,170 @@
+{
+  "generation": "gen2",
+  "android_version": "4.1.2",
+  "api_level": 16,
+  "scalar_framework": "Scalar V3-V17 (Scalar 2.3-2.17)",
+  "soc": "Sony CXD90014 (BIONZ X / Cortex-A9)",
+  "target_models": [
+    "ILCE-7", "ILCE-7R", "ILCE-7S", "ILCE-7M2", "ILCE-7RM2", "ILCE-7SM2",
+    "ILCE-5000", "ILCE-5100", "ILCE-6000", "ILCE-6300", "ILCE-6500",
+    "DSC-RX100M3", "DSC-RX100M4", "DSC-RX100M5", "DSC-RX10M2", "DSC-RX10M3",
+    "DSC-RX1RM2", "DSC-HX90"
+  ],
+  "classes": {
+    "com.sony.scalar.hardware.CameraEx": {
+      "exists": true,
+      "super_class": "java.lang.Object",
+      "methods": [
+        "adjustProgramLine(I)V",
+        "burstableTakePicture()V",
+        "cancelSelfTimerShutter()Z",
+        "cancelTakePicture()V",
+        "captureCustomWhiteBalance(Lcom/sony/scalar/hardware/CameraEx$CustomWhiteBalanceCallback;)V",
+        "createEmptyParameters()Landroid/hardware/Camera$Parameters;",
+        "createGammaTable()Lcom/sony/scalar/hardware/CameraEx$GammaTable;",
+        "createParametersModifier(Landroid/hardware/Camera$Parameters;)Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;",
+        "decrementAperture()V",
+        "decrementShutterSpeed()V",
+        "enableSettingChangedTypes([I)V",
+        "getApertureInfo()Lcom/sony/scalar/hardware/CameraEx$ApertureInfo;",
+        "getExtendedGammaTable()Lcom/sony/scalar/hardware/CameraEx$GammaTable;",
+        "getFocusPosition()Lcom/sony/scalar/hardware/CameraEx$FocusPosition;",
+        "getLensInfo()Lcom/sony/scalar/hardware/CameraEx$LensInfo;",
+        "getNormalCamera()Landroid/hardware/Camera;",
+        "getShutterSpeedInfo()Lcom/sony/scalar/hardware/CameraEx$ShutterSpeedInfo;",
+        "getZoomInfo()Lcom/sony/scalar/hardware/CameraEx$ZoomInfo;",
+        "incrementAperture()V",
+        "incrementShutterSpeed()V",
+        "open(ILcom/sony/scalar/hardware/CameraEx$OpenOptions;)Lcom/sony/scalar/hardware/CameraEx;",
+        "release()V",
+        "reopen(Lcom/sony/scalar/hardware/CameraEx$OpenOptions;Lcom/sony/scalar/hardware/CameraEx$OpenCallback;)V",
+        "setExtendedGammaTable(Lcom/sony/scalar/hardware/CameraEx$GammaTable;)V",
+        "setIntervalRecListener(Lcom/sony/scalar/hardware/CameraEx$IntervalRecListener;)V",
+        "setIntervalRecMode(Z)V",
+        "setNDFilterListener(Lcom/sony/scalar/hardware/CameraEx$NDFilterStatusListener;)V",
+        "setPreviewStartListener(Lcom/sony/scalar/hardware/CameraEx$PreviewStartListener;)V",
+        "setShutterListener(Lcom/sony/scalar/hardware/CameraEx$ShutterListener;)V",
+        "setTrackingFocusListener(Lcom/sony/scalar/hardware/CameraEx$TrackingFocusListener;)V",
+        "startDirectShutter()V",
+        "startFocusHold()V",
+        "startOneShotFocusDrive()V",
+        "startSelfTimerShutter()V",
+        "startTrackingFocus(II)V",
+        "stopCustomWhiteBalanceCapture()V",
+        "stopDirectShutter(Lcom/sony/scalar/hardware/CameraEx$DirectShutterStoppedCallback;)V",
+        "stopFocusHold()V",
+        "stopIntervalRec()V",
+        "stopTrackingFocus()V"
+      ],
+      "fields": []
+    },
+    "com.sony.scalar.hardware.CameraEx$ParametersModifier": {
+      "exists": true,
+      "super_class": "java.lang.Object",
+      "methods": [
+        "getColorCompensationForWhiteBalance()I",
+        "getColorMode()Ljava/lang/String;",
+        "getColorTemperatureForWhiteBalance()I",
+        "getContrast()I",
+        "getDROMode()Ljava/lang/String;",
+        "getHDRMode()Ljava/lang/String;",
+        "getISOSensitivity()I",
+        "getLightBalanceForWhiteBalance()I",
+        "getMaxColorCompensationForWhiteBalance()I",
+        "getMaxLightBalanceForWhiteBalance()I",
+        "getMinColorCompensationForWhiteBalance()I",
+        "getMinLightBalanceForWhiteBalance()I",
+        "getNDFilter()Ljava/lang/String;",
+        "getPictureEffect()Ljava/lang/String;",
+        "getRGBMatrix()[I",
+        "getSaturation()I",
+        "getSharpness()I",
+        "getSupportedColorDepthTypes()Ljava/util/List;",
+        "getSupportedColorModes()Ljava/util/List;",
+        "getTrackingFocus()Ljava/lang/String;",
+        "isExtendedGammaTableSupported()Z",
+        "isRGBMatrixSupported()Z",
+        "isSilentShutterMode()Z",
+        "isWhiteBalanceShiftModeSupported()Z",
+        "setColorCompensationForWhiteBalance(I)V",
+        "setColorDepth(Ljava/lang/String;I)V",
+        "setColorMode(Ljava/lang/String;)V",
+        "setColorTemperatureForWhiteBalance(I)V",
+        "setContrast(I)V",
+        "setDROMode(Ljava/lang/String;)V",
+        "setHDRMode(Ljava/lang/String;)V",
+        "setISOSensitivity(I)V",
+        "setLightBalanceForWhiteBalance(I)V",
+        "setNDFilter(Ljava/lang/String;)V",
+        "setPictureEffect(Ljava/lang/String;)V",
+        "setRGBMatrix([I)V",
+        "setSaturation(I)V",
+        "setSharpness(I)V",
+        "setSharpnessGain(I)V",
+        "setSharpnessGainMode(Z)V",
+        "setSilentShutterMode(Z)V",
+        "setTrackingFocus(Ljava/lang/String;)V",
+        "setWhiteBalanceShiftMode(Z)V"
+      ],
+      "fields": []
+    },
+    "com.sony.scalar.hardware.CameraEx$GammaTable": {
+      "exists": true,
+      "super_class": "com.sony.scalar.hardware.DeviceBuffer",
+      "methods": [
+        "getSize()I",
+        "isPictureEffectGammaForceOff()Z",
+        "isValid()Z",
+        "read([B)I",
+        "read(II[B)I",
+        "read(Ljava/io/OutputStream;)I",
+        "release()V",
+        "setPictureEffectGammaForceOff(Z)V",
+        "write([B)I",
+        "write(II[B)I",
+        "write(Ljava/io/InputStream;)I"
+      ],
+      "fields": []
+    },
+    "com.sony.imaging.app.base.shooting.camera.CameraSetting": {
+      "exists": true,
+      "methods": [
+        "getCamera()Lcom/sony/scalar/hardware/CameraEx;",
+        "getEmptyParameters()Landroid/util/Pair;",
+        "getInstance()Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;",
+        "init()V",
+        "registerNDFilterListener()V",
+        "setParameters(Landroid/util/Pair;)V",
+        "terminate()V",
+        "updateParameters()V"
+      ],
+      "fields": [
+        "mCamSet:Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;"
+      ]
+    },
+    "com.sony.imaging.app.base.menu.BaseMenuService": {
+      "exists": true,
+      "methods": [
+        "closeMenu()V",
+        "getMenuItemGuideText(Ljava/lang/String;)Ljava/lang/CharSequence;",
+        "getMenuItemText(Ljava/lang/String;)Ljava/lang/CharSequence;",
+        "getNextItemId(Ljava/lang/String;)Ljava/lang/String;",
+        "openMenu()V",
+        "setEachCautionIdClass(Ljava/lang/Class;)V"
+      ],
+      "fields": []
+    },
+    "com.sony.imaging.app.fw.AppRoot": {
+      "exists": true,
+      "methods": [
+        "finish()V",
+        "finish(Lcom/sony/imaging/app/fw/AppRoot$FINISH_TYPE;)V",
+        "onDestroy()V",
+        "startSystemReadyOnCreate()Z"
+      ],
+      "fields": [
+        "USER_KEYCODE:Lcom/sony/imaging/app/fw/AppRoot$USER_KEYCODE;"
+      ]
+    }
+  }
+}

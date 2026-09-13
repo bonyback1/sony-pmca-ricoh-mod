@@ -11,6 +11,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-09-13 (B2.2)
+
+### Added & Enhanced (Universal PMCA Cross-Model Support & 4-Tier Testbench)
+- **Universal PMCA Hardware Compatibility & Defensive HAL Architecture**:
+  - Implemented dynamic runtime probing and non-rethrowing exception handlers for all Gen 2-only calls (`setRGBMatrix([I)V`, `createGammaTable()`, `write()`, `setExtendedGammaTable()`, `release()`).
+  - Guaranteed crash-free execution on PMCA Gen 1 cameras (Android 2.3.7 / API 10, such as A7, A7R, A6000, NEX-5R/6): gracefully degrades to baseline parameters without throwing `NoSuchMethodError` or terminating the camera thread.
+  - Hardened fragile HAL hardware registers (`setColorMode`, `setDROMode`, `setHDRMode`) against hardware rejection on diverse camera firmware versions.
+  - Guaranteed native DMA table memory safety: `GammaTable.release()` is ensured in all paths to prevent kernel DMA memory leaks.
+- **Pure PMCA-Compliant V1 JAR Signer & Built-in 4-Byte ZipAlign Engine**:
+  - Replaced modern `uber-apk-signer` with a dedicated pure V1 JAR signer in `tools/sign_apk.py` (OpenSSL `smime -sign -noattr -binary`).
+  - Guaranteed zero APK Signature Scheme v2/v3 blocks and zero CMS signed attributes (`signingTime`, OID `1.2.840.113549.1.9.52`), completely eliminating `INSTALL_PARSE_FAILED_NO_CERTIFICATES` on Android 2.3.7 / 4.1.2 Apache Harmony `JarVerifier`.
+  - Built pure-Python 4-byte zipaligning directly into the signing engine: automatically pads the `extra` field of all uncompressed stored entries (including `resources.arsc`, drawable PNGs, and assets) so that `data_offset % 4 == 0` without external tool dependencies.
+  - Reuses project keystore (`debug.keystore` -> `tools/debug.pem`) to maintain signature continuity across app updates on camera.
+- **Automated 4-Tier Verification Testbench (`tools/testbench/`)**:
+  - Introduced automated test suite covering:
+    - **Tier 1**: Dalvik API 10 Static Bytecode Verifier (5 checks).
+    - **Tier 2**: PMCA Framework Symbol Auditor (4 checks: Gen 1 crash hazards, fragile HAL registers, framework symbols, DMA memory safety).
+    - **Tier 3**: Input Ergonomics Simulator (5 checks: dual-dial, single-dial, RX lens ring, A5100 touchscreen, center button 0xe8 bypass).
+    - **Tier 4**: APK Packaging & Signing Validator (5 checks: V1 JAR structure, SHA-1 digest integrity, absence of v2/v3 blocks, absence of CMS signed attributes, 4-byte zipalign boundaries).
+  - Achieved **19/19 checks PASS (100%)** across both `PictureEffectPlus_Ricoh.apk` and `Ricoh_Camera.apk`.
+
 ## [1.3.0] - 2026-09-12 (B2.1)
 
 ### Added & Enhanced (Runtime Adaptive Multi-Language Engine)

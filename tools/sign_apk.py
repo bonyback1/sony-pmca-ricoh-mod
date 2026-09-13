@@ -29,7 +29,27 @@ def ensure_pem(pem_path=None):
     if pem_path and os.path.exists(pem_path):
         return pem_path, False
     
+    # Check default project debug.pem
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    default_pem = os.path.join(script_dir, 'debug.pem')
+    if os.path.exists(default_pem):
+        return default_pem, False
+
+    default_ks = os.path.join(project_root, 'debug.keystore')
     openssl_bin = find_openssl()
+    if os.path.exists(default_ks):
+        try:
+            cmd = [
+                openssl_bin, 'pkcs12', '-in', default_ks,
+                '-out', default_pem, '-nodes', '-passin', 'pass:android'
+            ]
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            if res.returncode == 0 and os.path.exists(default_pem):
+                return default_pem, False
+        except Exception:
+            pass
+
     tmp_pem = tempfile.NamedTemporaryFile('w', suffix='.pem', delete=False)
     tmp_pem_path = tmp_pem.name
     tmp_pem.close()
@@ -130,18 +150,36 @@ def sign_apk(input_apk_path, output_apk_path, pem_path=None):
             if os.path.exists(rsa_tmp_path):
                 os.remove(rsa_tmp_path)
             
-        # 5. Write output APK
+        # 5. Write output APK with 4-byte zipalign
         os.makedirs(os.path.dirname(os.path.abspath(output_apk_path)), exist_ok=True)
-        with zipfile.ZipFile(output_apk_path, 'w', compression=zipfile.ZIP_DEFLATED) as zout:
-            zout.writestr('META-INF/MANIFEST.MF', manifest_bytes)
-            zout.writestr('META-INF/CERT.SF', sf_bytes)
-            zout.writestr('META-INF/CERT.RSA', rsa_bytes)
-            
-            for name in sorted(entries.keys()):
-                item, data = entries[name]
-                zout.writestr(item, data)
+        with open(output_apk_path, 'wb') as f_out:
+            with zipfile.ZipFile(f_out, 'w', compression=zipfile.ZIP_DEFLATED) as zout:
+                # Write META-INF entries
+                zout.writestr('META-INF/MANIFEST.MF', manifest_bytes)
+                zout.writestr('META-INF/CERT.SF', sf_bytes)
+                zout.writestr('META-INF/CERT.RSA', rsa_bytes)
                 
-        print(f"Successfully signed APK -> {output_apk_path}")
+                # Write APK contents with 4-byte alignment on uncompressed stored files
+                for name in sorted(entries.keys()):
+                    item, data = entries[name]
+                    new_info = zipfile.ZipInfo(item.filename, item.date_time)
+                    new_info.compress_type = item.compress_type
+                    new_info.comment = item.comment
+                    new_info.external_attr = item.external_attr
+                    orig_extra = item.extra or b''
+                    
+                    if item.compress_type == 0:
+                        fn_bytes = new_info.filename.encode('utf-8')
+                        cur_offset = zout.fp.tell()
+                        data_offset = cur_offset + 30 + len(fn_bytes) + len(orig_extra)
+                        pad = (4 - (data_offset % 4)) % 4
+                        new_info.extra = orig_extra + (b'\x00' * pad)
+                    else:
+                        new_info.extra = orig_extra
+                        
+                    zout.writestr(new_info, data)
+                
+        print(f"Successfully signed and 4-byte aligned APK -> {output_apk_path}")
         print(f"Files signed: {len(entries)}, RSA signature size: {len(rsa_bytes)} bytes")
     finally:
         if is_temp_pem and os.path.exists(actual_pem):

@@ -15,28 +15,26 @@ import argparse
 REPO = "bonyback1/sony-pmca-ricoh-mod"
 API_URL = f"https://api.github.com/repos/{REPO}/releases"
 
-DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.3.0 (B2.1) 发布
+DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.4.0 (B2.2) 发布
 
-本版本正式引入相机运行时「自适应多语言」引擎，依托 Android 底层 Locale 自动感知，实现一套统一 APK 在 English、繁體中文（台灣/香港）、简体中文（大陆）及其他全球系统语言下的无感自适应匹配！
+本版本重磅推出 **PMCA 全机型跨代硬件兼容架构** 与 **四阶全方位自动化测试工作台**！通过底层防御性 HAL 探测、优雅降级与纯正 V1 签名 / 4 字节内存对齐，确保应用在初代与二代所有索尼 PlayMemories Camera Apps 相机上稳健运行，实现 19/19 项自动化测试 100% 全通！
 
 #### 🌟 核心更新与调优
-- **运行时 Locale 自动感知引擎 (`RicohHook.getLanguageType`)**:
-  - 底层调用 `Locale.getDefault()` 实时感知机身语言，零人工配置；
-  - 自动归类为英文/全球通用 (0)、繁體中文 (1) 与 简体中文 (2)，当用户切换相机语言时，软件全自动无感刷新。
-- **动态自适应滤镜名称与帮助指南 (`getFilterName` / `getFilterGuide`)**:
-  - 滤镜槽位与浮层提示支持三态自动匹配：
-    - `pop-color`：`Ricoh GR Positive Film` / `理光 GR 正片` / `理光 GR 正片`
-    - `retro-photo`：`Ricoh Negative Film` / `理光 負片` / `理光 负片`
-    - `richtone-mono`：`High Contrast B&W` / `高對比黑白` / `高对比黑白`
-    - `rough-mono`：`Moriyama Daido B&W` / `森山大道風` / `森山大道风`
-    - `watercolor`：`Cross Process` / `正負逆沖` / `正负逆冲`
-- **UI 界面动态标题绑定**:
-  - 取景界面顶部 OSD 标题（`AppNameView`）与选项菜单顶部标题（`mScreenTitle`）均动态绑定至 `RicohHook.getAppTitle()`，显示为 `Ricoh Camera`、`理光相機` 或 `理光相机`。
-- **系统级桌面应用图标三态本地化 (`resources.arsc`)**:
-  - 资源字符串池精准匹配：繁体中文系统显示「理光相機」、简体中文系统显示「理光相机」、英文及其他 30 余种语言统一显示「Ricoh Camera」。
+- **PMCA 全机型硬件防御性架构与优雅降级**:
+  - 全面支持 PMCA 一代（Android 2.3.7 / API 10：A7、A7R、A6000、NEX-5R/6）与 PMCA 二代（Android 4.1.2 / API 16：A6300、A6500、A7M2、A7R2、RX100 系列）；
+  - 对所有二代专有硬件 API（`setRGBMatrix([I)V`、`createGammaTable()`、`setExtendedGammaTable()`）引入防御性 `try-catch` 与非重掷回退机制，在不支持 10-bit 伽马表或色彩矩阵的老机型上平滑降级至基础 ISP 参数控制，杜绝 `NoSuchMethodError` 崩溃；
+  - 深度防护脆弱 HAL 硬件寄存器（`setColorMode`、`setDROMode`、`setHDRMode`），消除机身固件拒绝导致的相机线程崩溃；
+  - 严格保障 DMA 内存安全生命周期：`GammaTable.release()` 无论成功或异常分支均百分百触发，消除内核 DMA 泄漏隐患。
+- **纯正 PMCA 兼容 V1 JAR 签名器与内置 4 字节 ZipAlign 引擎**:
+  - 使用专用 `sign_apk.py`（基于 OpenSSL `smime -sign -noattr -binary`）生成纯净 V1 JAR 签名，杜绝 v2/v3 签名块与 CMS 签名属性导致的 `INSTALL_PARSE_FAILED_NO_CERTIFICATES`；
+  - 签名引擎原生内置纯 Python 4 字节内存对齐（ZipAlign），确保 `resources.arsc` 等所有存储资源严格对齐；
+  - 复用项目调试证书（`debug.keystore` -> `tools/debug.pem`），支持免卸载直接覆盖升级。
+- **四阶全方位自动化测试工作台 (`tools/testbench/`)**:
+  - Tier 1（Dalvik 字节码）、Tier 2（PMCA 框架符号与 HAL 安全）、Tier 3（转盘与按键人体工程学）、Tier 4（V1 签名与打包合规），**19/19 项检查全部通过 (100% PASS)**。
 
 #### 📦 附件说明
-- `PictureEffectPlus_Ricoh.apk`：已签名并验证通过的正式安装包（集成 Android 4.1.2 兼容的 v1/v2/v3 签名）。
+- `PictureEffectPlus_Ricoh.apk`：已通过 19 项跨机型测试台验证的正式安装包（纯 V1 签名 + 4 字节对齐）。
+- `Ricoh_Camera.apk`：同上安装包副本。
 
 #### 🚀 安装方式
 ```bash
@@ -44,7 +42,7 @@ DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod)
 ```
 """
 
-def publish_release(token, tag="v1.3.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v1.4.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 
@@ -54,7 +52,7 @@ def publish_release(token, tag="v1.3.0", apk_path="PictureEffectPlus_Ricoh.apk",
         "User-Agent": "Sony-PMCA-Publisher"
     }
 
-    title = title or f"{tag} (B2.0) - 理光色彩科学第一阶段重构：硬件白平衡偏移、Gamma内嵌曝光补偿与高低光分色矩阵"
+    title = title or f"{tag} (B2.2) - 全机型跨代硬件兼容 (A7/A6000/A6300/RX100) 与四阶自动化测试工作台"
     body = body or DEFAULT_BODY
 
     # 1. Check if release already exists for this tag

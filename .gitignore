@@ -43,4 +43,5 @@ build/
 dist/
 /tmp/
 unsigned.apk
+.agents/
 

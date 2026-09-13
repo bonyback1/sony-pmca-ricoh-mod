@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.3.0--B2.1-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.4.0--B2.2-orange?style=flat-square" alt="Version">
 </p>
 
 通过底层硬件 ISP Hook 逆向技术，将索尼官方「照片效果+ (Picture Effect+)」应用深度改造为原生级**「理光相机」**。直接将理光 GR 经典胶片色彩的 **前置硬件白平衡偏置 (WB Shift)、1024 阶非线性 Gamma 曲线 (内嵌 EV 补偿) 与 3×3 RGB 颜色矩阵** 协同写入相机底层硬件寄存器，重现理光 GR 经典的高低光分色 (Split Toning) 与胶片色彩厚重感，实现**零快门延迟、EVF/LCD 实时取景无拖影、原生高速连拍**的直出胶片体验。
@@ -19,7 +19,10 @@
 
 ## 🌟 核心特性与亮点
 
-- ⚡ **纯硬件 ISP 实时管线**：
+- 🛡️ **PMCA 全机型硬件防御性架构与平滑降级**:
+  - 深度适配所有 PMCA 世代相机：全面支持 PMCA 一代（Android 2.3.7 / API 10：A7、A7R、A6000、NEX-5R/6）与 PMCA 二代（Android 4.1.2 / API 16：A6300、A6500、A7M2、A7R2、RX100 系列），在不支持 10-bit 伽马表或色彩矩阵的老机型上平滑降级，绝不报 `NoSuchMethodError` 崩溃；
+  - 配套完善的**四阶全方位自动化测试工作台**（Dalvik 字节码、PMCA 框架符号审计、按键交互模拟、纯 V1 签名与 4 字节内存对齐验证），实现 19/19 项 100% 全通；
+- ⚡ **纯硬件 ISP 级实时管线 (零快门延迟 / 支持高速连拍)**：
   直接调用索尼相机底层私有库 `com.sony.scalar.hardware.CameraEx` 写入硬件寄存器。拍照走 `SingleProcess` $\rightarrow$ `CameraEx.burstableTakePicture()`，不调用慢速 CPU RAW 显影，对焦、快门、连拍、取景全部为原生无延迟体验。
 - 🌐 **运行时自适应多语言引擎 (Locale 自动感知)**：
   - 基于 Android 底层 `Locale.getDefault()` 实时感知机身语言，无需安装不同版本 APK。

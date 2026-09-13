@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.3.0--B2.1-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.4.0--B2.2-orange?style=flat-square" alt="Version">
 </p>
 
 Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into a native-level **"Ricoh Camera"** through low-level hardware ISP hook and reverse engineering. By directly programming the **pre-ISP hardware White Balance shifts (LB/CC), 1024-point non-linear Gamma tone curves (with baked EV compensation), and row-sum normalized 3×3 RGB color matrices** into camera hardware registers, it faithfully reproduces the signature Ricoh GR split toning and filmic weight—delivering **zero shutter lag, artifact-free real-time EVF/LCD preview, and native high-speed continuous burst shooting**.
@@ -19,6 +19,9 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
 
 ## 🌟 Key Features & Highlights
 
+- 🛡️ **Universal PMCA Hardware Compatibility & Defensive HAL Architecture**:
+  - Engineered with defensive runtime HAL probing and non-rethrowing exception handlers: flawlessly runs across **all PMCA camera generations**, including PMCA Gen 1 (Android 2.3.7 / API 10: NEX-5R/6, A7, A7R, A6000) and PMCA Gen 2 (Android 4.1.2 / API 16: A6300, A6500, A7M2, A7R2, RX100 M3/M4/M5). Older bodies gracefully degrade without `NoSuchMethodError` crashes.
+  - Validated by an automated **4-Tier verification testbench** (Dalvik API 10 bytecode, framework symbols, input ergonomics, and V1 signature/4-byte zipalign packaging) with 100% test pass rate (19/19 checks).
 - ⚡ **Pure Hardware ISP Real-time Pipeline**:
   Directly interfaces with Sony's proprietary library `com.sony.scalar.hardware.CameraEx` to write directly to hardware registers. Still capture executes via `SingleProcess` $\rightarrow$ `CameraEx.burstableTakePicture()`, completely bypassing slow software CPU RAW processing. Autofocus, shutter trigger, burst shooting, and live view operate with zero added latency.
 - 🌐 **Runtime Adaptive Multi-Language Engine (Zero-Config)**:

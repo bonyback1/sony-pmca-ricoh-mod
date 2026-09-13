@@ -11,6 +11,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-09-13 (B2.3)
+
+### Added & Enhanced (Authentic Ricoh GR III 3D LUT Decomposition & Color Bench)
+- **Authentic Ricoh GR III 3D LUT Mathematical Decomposition**:
+  - Extracted 1024-step 10-bit non-linear Gamma tone curves and 3×3 RGB color matrices directly from genuine Ricoh GR3 3D LUT profiles (`GR3-P-V3 Plady.cube`, `GR3-N-V3 Plady.cube`, `GR3-HiBW Plady.cube`).
+  - **Ricoh GR Positive Film**: Applied true GR3 slide film tone curve and calibrated color matrix, matching authentic GR3 slide rendering with saturated cyan skies and warm foliage.
+  - **Ricoh Negative Film**: Replaced synthetic approximations with authentic GR3 negative film curves, preserving lifted matte shadows and rich highlight roll-off.
+  - **High Contrast B&W**: Extracted genuine GR3 luminance perceptual weights and steep monochrome response.
+- **Color Science Benchmarking Suite (`tools/color_bench/`)**:
+  - Introduced automated color benchmark analyzing $\Delta E_{00}$ color deviations against DPReview studio scene and X-Rite ColorChecker references.
+  - Implemented `decompose_cube.py` for automated 3D LUT cube parsing, SVD-based matrix optimization, and interactive HTML benchmark reporting.
+- **Enhanced Deployment Script (`scripts/install.sh`)**:
+  - Added automatic detection for `INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES`: automatically cleans up older conflicting signed builds from camera and retries clean installation without user intervention.
+- **Strict V1 SHA-1 Digest Enforcement (`tools/sign_apk.py`)**:
+  - Enforced `-md sha1` in OpenSSL SMIME signer for flawless Apache Harmony `JarVerifier` compatibility on older camera firmware.
+
 ## [1.4.0] - 2026-09-13 (B2.2)
 
 ### Added & Enhanced (Universal PMCA Cross-Model Support & 4-Tier Testbench)

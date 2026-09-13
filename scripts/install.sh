@@ -106,6 +106,19 @@ if echo "${INSTALL_RES}" | grep -q "Success"; then
 else
     echo ""
     echo "❌ 安装遇到错误，请查看上方输出。"
+    if echo "${INSTALL_RES}" | grep -q "INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES"; then
+        echo "⚠️ 检测到相机内已存在不同签名的旧版本，正在卸载旧版本并自动重试全新安装..."
+        adb -s "${TARGET}" uninstall com.sony.imaging.app.pictureeffectplus || true
+        REINSTALL_RES=$(adb -s "${TARGET}" install "${APK_PATH}" 2>&1)
+        echo "${REINSTALL_RES}"
+        if echo "${REINSTALL_RES}" | grep -q "Success"; then
+            echo ""
+            echo "=================================================================="
+            echo "🎉 自动清理旧签名版本并全新安装成功！"
+            echo "=================================================================="
+            exit 0
+        fi
+    fi
     if echo "${INSTALL_RES}" | grep -q "INSTALL_PARSE_FAILED_NO_CERTIFICATES"; then
         echo "💡 提示: 证书签名不兼容，请使用 python3 tools/sign_apk.py 对 APK 重新签名。"
     elif echo "${INSTALL_RES}" | grep -q "INSTALL_FAILED_DEXOPT"; then

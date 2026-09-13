@@ -11,6 +11,22 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 並嚴格遵循 [語意化版本規範 (SemVer)](https://semver.org/lang/zh-TW/)。
 
+## [1.5.0] - 2026-09-13 (B2.3)
+
+### 新增與增強 (真·理光 GR3 3D LUT 逆向分解與色彩科學基準)
+- **真·理光 GR3 3D LUT 動力學逆向分解**:
+  - 直接從真實理光 GR3 官方機型取樣產生的 3D LUT 色彩檔案（`GR3-P-V3 Plady.cube`、`GR3-N-V3 Plady.cube`、`GR3-HiBW Plady.cube`）中，數學逆向分解出原生 1024 階 10-bit 非線性 Gamma 曲線與 3×3 顏色矩陣；
+  - **理光 GR 正片**: 徹底告別經驗調參，全面注入真實 GR3 正片微曲率動態範圍曲線與高低光分色矩陣，高飽和青藍天空與暖陽質感達到官方母版級還原；
+  - **理光負片**: 依循真實 GR3 負片色彩特徵，精準再現底片消光黑位提升與優雅高光滾降；
+  - **高對比黑白**: 擷取真機灰階亮度加權與陡峭黑白對比度曲線。
+- **色彩科學自動化基準測試套件 (`tools/color_bench/`)**:
+  - 全新加入基於 X-Rite 24 色卡與 DPReview 攝影棚實測資料的 $\Delta E_{00}$ 色差評估引擎；
+  - 提供 `decompose_cube.py` 自動化 LUT 分解器與互動式 HTML 色彩評測報告產生器。
+- **智慧安裝指令稿升級 (`scripts/install.sh`)**:
+  - 新增 `INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES` 自動探測與修復：若相機中殘留不同簽名的舊版本，指令稿將自動解除安裝衝突版本並重新無感安裝，徹底杜絕安裝失敗；
+- **純正 V1 SHA-1 摘要規範化 (`tools/sign_apk.py`)**:
+  - 明確增加 OpenSSL `-md sha1` 摘要參數，保障舊機型 Apache Harmony 憑證解析穩定性。
+
 ## [1.4.0] - 2026-09-13 (B2.2)
 
 ### 新增與增強 (全機型跨代硬體相容與四階自動化測試工作台)
@@ -142,11 +158,16 @@
 
 ### 初始發布
 - **5 款經典理光底片色彩預設**:
-  - `pop-color` $ightarrow$ **理光 GR 正片**: 濃郁高飽和度與高反差 S 曲線。
-  - `retro-photo` $ightarrow$ **理光負片**: 消光提升黑位與泛黃暖調高光。
-  - `richtone-mono` $ightarrow$ **高對比黑白**: 精準 BT.601 感知亮度灰階轉換與大 S 曲線。
-  - `rough-mono` $ightarrow$ **森山大道風**: 強紅鏡通道權重與粗獷顆粒對比。
-  - `watercolor` $ightarrow$ **正負逆沖**: 雙色青/黃綠反轉偏移曲線。
+  - `pop-color` $
+ightarrow$ **理光 GR 正片**: 濃郁高飽和度與高反差 S 曲線。
+  - `retro-photo` $
+ightarrow$ **理光負片**: 消光提升黑位與泛黃暖調高光。
+  - `richtone-mono` $
+ightarrow$ **高對比黑白**: 精準 BT.601 感知亮度灰階轉換與大 S 曲線。
+  - `rough-mono` $
+ightarrow$ **森山大道風**: 強紅鏡通道權重與粗獷顆粒對比。
+  - `watercolor` $
+ightarrow$ **正負逆沖**: 雙色青/黃綠反轉偏移曲線。
 - **純硬體 ISP 即時管線**:
   - 編寫 `RicohHook` 直接對接 `com.sony.scalar.hardware.CameraEx`。
   - 零快門延遲、取景器即時預覽、支援全速硬體高速連拍（`burstableTakePicture`）。

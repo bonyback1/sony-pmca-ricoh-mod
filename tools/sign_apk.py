@@ -134,6 +134,7 @@ def sign_apk(input_apk_path, output_apk_path, pem_path=None):
                 "-outform", "DER",
                 "-inkey", actual_pem,
                 "-signer", actual_pem,
+                "-md", "sha1",
                 "-noattr",
                 "-binary",
                 "-out", rsa_tmp_path

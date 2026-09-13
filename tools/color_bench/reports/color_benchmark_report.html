@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sony A6300 vs Ricoh GR III Color Science Benchmark</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0f141c; color: #e1e7ec; margin: 0; padding: 24px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { color: #f39c12; font-size: 28px; margin-bottom: 8px; }
+  .subhead { color: #8892b0; margin-bottom: 32px; font-size: 15px; }
+  .card { background: #1a2230; border-radius: 10px; border: 1px solid #2d3b4e; padding: 24px; margin-bottom: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .card h2 { color: #64ffda; margin-top: 0; font-size: 20px; border-bottom: 1px solid #2d3b4e; padding-bottom: 12px; }
+  .metric-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .metric-box { background: #131924; border: 1px solid #2d3b4e; border-radius: 8px; padding: 14px 20px; flex: 1; min-width: 160px; }
+  .metric-title { font-size: 12px; color: #8892b0; text-transform: uppercase; margin-bottom: 4px; }
+  .metric-val { font-size: 24px; font-weight: bold; }
+  .val-pass { color: #2ecc71; }
+  .val-warn { color: #f39c12; }
+  .val-fail { color: #e74c3c; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #2d3b4e; }
+  th { background: #131924; color: #8892b0; font-weight: 600; }
+  .swatch { display: inline-block; width: 32px; height: 20px; border-radius: 4px; vertical-align: middle; border: 1px solid #444; margin-right: 6px; }
+  .img-container { text-align: center; margin: 24px 0; }
+  .img-container img { max-width: 100%; border-radius: 8px; border: 1px solid #2d3b4e; }
+  pre { background: #131924; border: 1px solid #2d3b4e; border-radius: 6px; padding: 14px; font-family: 'SF Mono', Consolas, Menlo, monospace; font-size: 12px; color: #64ffda; overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📷 Sony A6300 vs Ricoh GR III Color Science Benchmark</h1>
+  <div class="subhead">Universal PMCA Ricoh Camera Mod (v1.4.0 / B2.2) • Ground Truth Comparison & Closed-Loop Calibration Report</div>
+  <div class="card">
+    <h2>Ricoh GR Positive Film (理光 GR 正片)</h2>
+    <div class="metric-row">
+      <div class="metric-box">
+        <div class="metric-title">Average ΔE₀₀</div>
+        <div class="metric-val val-warn">5.34</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Max ΔE₀₀ (Worst Patch)</div>
+        <div class="metric-val">7.85</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Black Pedestal (10-bit)</div>
+        <div class="metric-val">0 <span style="font-size:13px;color:#8892b0;">(0.0 sRGB)</span></div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Split Toning (Δb*)</div>
+        <div class="metric-val">+0.27</div>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="pop-color_color_benchmark.png" alt="Ricoh GR Positive Film (理光 GR 正片) Benchmark Chart" />
+    </div>
+  </div>
+  <div class="card">
+    <h2>Ricoh Negative Film (理光负片)</h2>
+    <div class="metric-row">
+      <div class="metric-box">
+        <div class="metric-title">Average ΔE₀₀</div>
+        <div class="metric-val val-fail">7.03</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Max ΔE₀₀ (Worst Patch)</div>
+        <div class="metric-val">13.00</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Black Pedestal (10-bit)</div>
+        <div class="metric-val">0 <span style="font-size:13px;color:#8892b0;">(0.0 sRGB)</span></div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Split Toning (Δb*)</div>
+        <div class="metric-val">+2.69</div>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="retro-photo_color_benchmark.png" alt="Ricoh Negative Film (理光负片) Benchmark Chart" />
+    </div>
+  </div>
+  <div class="card">
+    <h2>High Contrast B&W (高对比黑白)</h2>
+    <div class="metric-row">
+      <div class="metric-box">
+        <div class="metric-title">Average ΔE₀₀</div>
+        <div class="metric-val val-pass">3.44</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Max ΔE₀₀ (Worst Patch)</div>
+        <div class="metric-val">17.17</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Black Pedestal (10-bit)</div>
+        <div class="metric-val">0 <span style="font-size:13px;color:#8892b0;">(0.0 sRGB)</span></div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Split Toning (Δb*)</div>
+        <div class="metric-val">+0.00</div>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="richtone-mono_color_benchmark.png" alt="High Contrast B&W (高对比黑白) Benchmark Chart" />
+    </div>
+  </div>
+  <div class="card">
+    <h2>Moriyama Daido B&W (森山大道风)</h2>
+    <div class="metric-row">
+      <div class="metric-box">
+        <div class="metric-title">Average ΔE₀₀</div>
+        <div class="metric-val val-fail">7.88</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Max ΔE₀₀ (Worst Patch)</div>
+        <div class="metric-val">25.47</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Black Pedestal (10-bit)</div>
+        <div class="metric-val">0 <span style="font-size:13px;color:#8892b0;">(0.0 sRGB)</span></div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Split Toning (Δb*)</div>
+        <div class="metric-val">+0.00</div>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="rough-mono_color_benchmark.png" alt="Moriyama Daido B&W (森山大道风) Benchmark Chart" />
+    </div>
+  </div>
+  <div class="card">
+    <h2>Cross Process (正负逆冲)</h2>
+    <div class="metric-row">
+      <div class="metric-box">
+        <div class="metric-title">Average ΔE₀₀</div>
+        <div class="metric-val val-warn">6.12</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Max ΔE₀₀ (Worst Patch)</div>
+        <div class="metric-val">14.71</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Black Pedestal (10-bit)</div>
+        <div class="metric-val">8 <span style="font-size:13px;color:#8892b0;">(2.0 sRGB)</span></div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Split Toning (Δb*)</div>
+        <div class="metric-val">-1.35</div>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="watercolor_color_benchmark.png" alt="Cross Process (正负逆冲) Benchmark Chart" />
+    </div>
+  </div>
+</div>
+</body>
+</html>

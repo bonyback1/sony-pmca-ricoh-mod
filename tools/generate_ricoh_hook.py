@@ -1,5 +1,11 @@
 import glob
 import math
+import os
+import sys
+
+WORKSPACE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if WORKSPACE_DIR not in sys.path:
+    sys.path.insert(0, WORKSPACE_DIR)
 
 def pts_to_bytes(pts):
     b = bytearray()
@@ -26,11 +32,19 @@ def make_filmic_curve(slope=1.2, toe_lift=0, shoulder_max=1023, center=0.5, ev_o
     return pts
 
 def gen_curve_pos():
-    # Ricoh GR Positive Film: gentle filmic S-curve with -0.33 EV baked in for rich, dense positive film colors
+    # Decomposed from authentic GR3-P-V3 Plady.cube
+    cube_path = os.path.join(os.path.dirname(__file__), "..", "GR3-P-V3 Plady.cube")
+    if os.path.exists(cube_path):
+        from tools.color_bench.decompose_cube import decompose_cube
+        return decompose_cube(cube_path)["gamma_1024"]
     return make_filmic_curve(slope=1.25, toe_lift=4, shoulder_max=1020, center=0.48, ev_offset=-0.33)
 
 def gen_curve_neg():
-    # Ricoh Negative Film: lifted matte shadows (toe_lift=36), +0.33 EV baked in for soft airy look, gentle contrast
+    # Decomposed from authentic GR3-N-V3 Plady.cube
+    cube_path = os.path.join(os.path.dirname(__file__), "..", "GR3-N-V3 Plady.cube")
+    if os.path.exists(cube_path):
+        from tools.color_bench.decompose_cube import decompose_cube
+        return decompose_cube(cube_path)["gamma_1024"]
     return make_filmic_curve(slope=1.08, toe_lift=36, shoulder_max=985, center=0.50, ev_offset=0.33)
 
 def gen_curve_hcbw():
@@ -140,67 +154,67 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 
     :array_pos_matrix
     .array-data 4
-        0x47c
-        -0x54
-        -0x28
-        -0x24
-        0x45e
-        -0x3a
-        -0x18
-        -0x44
-        0x45c
+        0x3df
+        0xcb
+        -0xaa
+        -0x15
+        0x423
+        -0xe
+        0x30
+        0x104
+        0x2cc
     .end array-data
 
     :array_neg_matrix
     .array-data 4
-        0x416
-        -0x10
-        -0x6
-        -0x1a
-        0x402
-        0x18
-        -0x24
-        -0x10
-        0x434
+        0x350
+        -0x36
+        0xe6
+        0xa9
+        0x281
+        0xd6
+        0x42
+        0x116
+        0x2a8
     .end array-data
 
     :array_hcbw_matrix
     .array-data 4
-        0x132
-        0x259
-        0x75
-        0x132
-        0x259
-        0x75
-        0x132
-        0x259
-        0x75
+        0x114
+        0x279
+        0x73
+        0x114
+        0x279
+        0x73
+        0x114
+        0x279
+        0x73
     .end array-data
 
     :array_daido_matrix
     .array-data 4
-        0x233
-        0x166
-        0x67
-        0x233
-        0x166
-        0x67
-        0x233
-        0x166
-        0x67
+        0x271
+        0x182
+        0xd
+        0x271
+        0x182
+        0xd
+        0x271
+        0x182
+        0xd
     .end array-data
 
     :array_xpro_matrix
     .array-data 4
-        0x46a
-        -0x56
-        -0x14
-        0x46
-        0x42e
-        -0x74
-        -0x3c
-        0x1e
-        0x41e
+        0x475
+        -0x45
+        -0x30
+        0x8
+        0x407
+        -0xf
+        -0x13
+        0x29
+        0x3ea
     .end array-data
 
     :array_id_matrix
@@ -476,7 +490,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_neg
-    const/4 v0, 0x2
+    const/4 v0, 0x0
     return v0
 
     :cond_neg
@@ -484,7 +498,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_xpro
-    const/4 v0, 0x4
+    const/4 v0, 0x2
     return v0
 
     :cond_xpro
@@ -507,7 +521,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_neg
-    const/4 v0, -0x1
+    const/4 v0, 0x0
     return v0
 
     :cond_neg
@@ -515,7 +529,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_xpro
-    const/4 v0, -0x2
+    const/4 v0, 0x0
     return v0
 
     :cond_xpro

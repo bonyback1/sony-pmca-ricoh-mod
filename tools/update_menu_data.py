@@ -80,6 +80,48 @@ def update_menu_data(menu_file):
         else:
             print(f'Warning: Only found {len(block_map)} Ricoh presets in ApplicationTop, skipping reordering.')
 
+    # 3. Add RAW & JPEG and RAW to setPictureStorageFormat Layer1
+    quality_match = re.search(r'(<Layer1\b[^>]*ItemId="setPictureStorageFormat"[^>]*>)([\s\S]*?)(</Layer1>)', content)
+    if quality_match:
+        q_body = quality_match.group(2)
+        if 'ItemId="setPictureStorageFormat_rawjpeg"' not in q_body:
+            raw_entries = '''
+            <Layer2
+                CautionID="CAUTION_GRP_ID_STILL_IMAGE_QUALITY_RAW_JPEG_INVALID_GUIDE"
+                ConfigClass="com.sony.imaging.app.base.shooting.camera.PictureQualityController"
+                DisplayName="RAW &amp; JPEG"
+                ExecType="SET_VALUE"
+                GuideRes=""
+                IconRes="drawable/p_16_dd_parts_5w_shoot_icon_imgquality_uncompressed_raw_j"
+                ItemId="setPictureStorageFormat_rawjpeg"
+                SelectedIconRes="drawable/p_16_dd_parts_5w_shoot_icon_imgquality_uncompressed_raw_j"
+                TextRes=""
+                Title="RAW &amp; JPEG"
+                Value="rawjpeg" >
+            </Layer2>
+
+            <Layer2
+                CautionID="CAUTION_GRP_ID_STILL_IMAGE_QUALITY_RAW_INVALID_GUIDE"
+                ConfigClass="com.sony.imaging.app.base.shooting.camera.PictureQualityController"
+                DisplayName="RAW"
+                ExecType="SET_VALUE"
+                GuideRes=""
+                IconRes="drawable/p_16_dd_parts_5w_shoot_icon_imgquality_uncompressed_raw"
+                ItemId="setPictureStorageFormat_raw"
+                SelectedIconRes="drawable/p_16_dd_parts_5w_shoot_icon_imgquality_uncompressed_raw"
+                TextRes=""
+                Title="RAW"
+                Value="raw" >
+            </Layer2>
+'''
+            new_q_body = raw_entries + q_body
+            content = content[:quality_match.start(2)] + new_q_body + content[quality_match.end(2):]
+            print("Successfully added RAW & JPEG and RAW options to setPictureStorageFormat in MenuData.xml")
+        else:
+            print("setPictureStorageFormat_rawjpeg already present in MenuData.xml")
+    else:
+        print("Warning: setPictureStorageFormat Layer1 not found in MenuData.xml")
+
     with open(menu_file, 'w', encoding='utf-8') as f:
         f.write(content)
 

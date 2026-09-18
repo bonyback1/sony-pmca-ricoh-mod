@@ -11,6 +11,17 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 並嚴格遵循 [語意化版本規範 (SemVer)](https://semver.org/lang/zh-TW/)。
 
+## [1.6.0] - 2026-09-18 (B2.4)
+
+### 新增與增強 (全面解鎖 RAW+JPEG 與純 RAW 拍攝模式)
+- **突破原廠畫質限制：全面解鎖 RAW+JPEG 與純 RAW 輸出**:
+  - 徹底打破索尼官方相片效果應用程式僅允許儲存 JPEG (Fine/Standard) 的底層硬編碼限制；
+  - 在選單設定檔 `MenuData.xml` 的 `setPictureStorageFormat` 畫質選項層級中動態注入 `setPictureStorageFormat_rawjpeg` (RAW與JPEG) 與 `setPictureStorageFormat_raw` (RAW)；
+  - 在 `PictureQualityController.smali` 中注入 `RicohHook.filterQualityAvailability`，成功接管並重寫 `AvailableInfo.isAvailable()` 畫質可用性判斷邏輯；
+  - 拍攝時不僅即時產生濃郁的理光底片色彩直出 JPEG，更同步完整儲存索尼 14-bit 無損 ARW 原始負片檔案，快拍分享與後期深度調色兩不誤。
+- **三語自適應畫質選單與指南**:
+  - 針對新增的 RAW 畫質選項注入英文（`RAW & JPEG` / `RAW`）、繁體中文（`RAW與JPEG` / `RAW`）與簡體中文（`RAW与JPEG` / `RAW`）的錶盤標題及詳細功能指南說明。
+
 ## [1.5.0] - 2026-09-13 (B2.3)
 
 ### 新增與增強 (真·理光 GR3 3D LUT 逆向分解與色彩科學基準)

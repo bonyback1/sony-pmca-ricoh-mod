@@ -1622,7 +1622,7 @@
     const-string v0, "watercolor"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
-    if-eqz v0, :cond_none
+    if-eqz v0, :cond_check_rawjpeg
     if-nez v1, :cond_xpro_zh
     const-string v0, "Cross Process"
     return-object v0
@@ -1633,6 +1633,33 @@
     return-object v0
     :cond_xpro_cn
     const-string v0, "正负逆冲"
+    return-object v0
+
+    :cond_check_rawjpeg
+    # 6. setPictureStorageFormat_rawjpeg
+    const-string v0, "setPictureStorageFormat_rawjpeg"
+    invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_raw
+    if-nez v1, :cond_rawj_zh
+    const-string v0, "RAW & JPEG"
+    return-object v0
+    :cond_rawj_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_rawj_cn
+    const-string v0, "RAW與JPEG"
+    return-object v0
+    :cond_rawj_cn
+    const-string v0, "RAW与JPEG"
+    return-object v0
+
+    :cond_check_raw
+    # 7. setPictureStorageFormat_raw
+    const-string v0, "setPictureStorageFormat_raw"
+    invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_none
+    const-string v0, "RAW"
     return-object v0
 
     :cond_none
@@ -1722,7 +1749,7 @@
     const-string v0, "watercolor"
     invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
-    if-eqz v0, :cond_none
+    if-eqz v0, :cond_check_guide_rawjpeg
     if-nez v1, :cond_guide_xpro_zh
     const-string v0, "Ricoh Cross Process unique tone effect"
     return-object v0
@@ -1735,7 +1762,69 @@
     const-string v0, "正负逆冲独特色彩反冲效果 (Ricoh Cross Process)"
     return-object v0
 
+    :cond_check_guide_rawjpeg
+    # 6. setPictureStorageFormat_rawjpeg
+    const-string v0, "setPictureStorageFormat_rawjpeg"
+    invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_guide_raw
+    if-nez v1, :cond_guide_rawj_zh
+    const-string v0, "Simultaneously records both a RAW image and a JPEG image."
+    return-object v0
+    :cond_guide_rawj_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_guide_rawj_cn
+    const-string v0, "同時記錄RAW影像和JPEG影像。"
+    return-object v0
+    :cond_guide_rawj_cn
+    const-string v0, "同时记录RAW图像和JPEG图像。"
+    return-object v0
+
+    :cond_check_guide_raw
+    # 7. setPictureStorageFormat_raw
+    const-string v0, "setPictureStorageFormat_raw"
+    invoke-virtual {p0, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_none
+    if-nez v1, :cond_guide_raw_zh
+    const-string v0, "Records a RAW image."
+    return-object v0
+    :cond_guide_raw_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_guide_raw_cn
+    const-string v0, "記錄RAW影像。"
+    return-object v0
+    :cond_guide_raw_cn
+    const-string v0, "记录RAW图像。"
+    return-object v0
+
     :cond_none
     const/4 v0, 0x0
     return-object v0
+.end method
+
+.method public static filterQualityAvailability(Ljava/lang/String;Z)Z
+    .locals 1
+
+    if-nez p1, :cond_orig_ok
+
+    const-string v0, "rawjpeg"
+    invoke-virtual {v0, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_check_raw
+
+    const/4 v0, 0x1
+    return v0
+
+    :cond_check_raw
+    const-string v0, "raw"
+    invoke-virtual {v0, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :cond_orig_ok
+
+    const/4 v0, 0x1
+    return v0
+
+    :cond_orig_ok
+    return p1
 .end method

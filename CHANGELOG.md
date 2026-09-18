@@ -11,6 +11,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-09-18 (B2.4)
+
+### Added & Enhanced (RAW & JPEG Dual Format Unlocked)
+- **RAW & JPEG and Pure RAW Output Unlocked**:
+  - Bypassed Sony's artificial constraint in the official Picture Effect+ architecture that restricted image quality strictly to JPEG.
+  - Injected `setPictureStorageFormat_rawjpeg` (RAW & JPEG) and `setPictureStorageFormat_raw` (RAW) into the camera's image format selection layer (`MenuData.xml`).
+  - Injected `filterQualityAvailability` hook into `PictureQualityController.smali` to override `AvailableInfo.isAvailable()` and unlock quality options.
+  - Enables simultaneous capture of real-time Ricoh film simulation JPEGs and untouched 14-bit ARW raw files.
+- **Tri-Lingual Menu & Guide Strings**:
+  - Added localized display names and explanatory guides for `RAW & JPEG` and `RAW` in English, Traditional Chinese (`RAW與JPEG`), and Simplified Chinese (`RAW与JPEG`).
+
 ## [1.5.0] - 2026-09-13 (B2.3)
 
 ### Added & Enhanced (Authentic Ricoh GR III 3D LUT Decomposition & Color Bench)

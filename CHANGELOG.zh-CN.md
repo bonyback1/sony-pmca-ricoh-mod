@@ -11,6 +11,17 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并严格遵循 [语义化版本规范 (SemVer)](https://semver.org/lang/zh-CN/)。
 
+## [1.6.0] - 2026-09-18 (B2.4)
+
+### 新增与增强 (全面解锁 RAW+JPEG 与纯 RAW 拍摄模式)
+- **突破原厂画质枷锁：全面解锁 RAW+JPEG 与纯 RAW 输出**:
+  - 彻底打破索尼官方照片效果应用仅允许保存 JPEG (Fine/Standard) 的底层硬编码限制；
+  - 在菜单配置文件 `MenuData.xml` 的 `setPictureStorageFormat` 画质选项层级中动态注入 `setPictureStorageFormat_rawjpeg` (RAW与JPEG) 与 `setPictureStorageFormat_raw` (RAW)；
+  - 在 `PictureQualityController.smali` 中注入 `RicohHook.filterQualityAvailability`，成功接管并重写 `AvailableInfo.isAvailable()` 画质可用性判断逻辑；
+  - 拍摄时不仅即时生成浓郁的理光胶片色彩直出 JPEG，更同步完整保存索尼 14-bit 无损 ARW 原始负片文件，快拍分享与后期深度调色两不误。
+- **三语自适应画质菜单与指南**:
+  - 针对新增的 RAW 画质选项注入英文（`RAW & JPEG` / `RAW`）、繁体中文（`RAW與JPEG` / `RAW`）与简体中文（`RAW与JPEG` / `RAW`）的表盘标题及详细功能指南说明。
+
 ## [1.5.0] - 2026-09-13 (B2.3)
 
 ### 新增与增强 (真·理光 GR3 3D LUT 逆向分解与色彩科学基准)

@@ -45,3 +45,6 @@ dist/
 unsigned.apk
 .agents/
 
+
+# Local scratch scripts
+scripts/install_recipelab.sh

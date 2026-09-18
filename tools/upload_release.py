@@ -15,7 +15,7 @@ import argparse
 REPO = "bonyback1/sony-pmca-ricoh-mod"
 API_URL = f"https://api.github.com/repos/{REPO}/releases"
 
-DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.5.0 (B2.3) 发布
+DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.6.0 (B2.4) 发布
 
 本版本重磅推出 **PMCA 全机型跨代硬件兼容架构** 与 **四阶全方位自动化测试工作台**！通过底层防御性 HAL 探测、优雅降级与纯正 V1 签名 / 4 字节内存对齐，确保应用在初代与二代所有索尼 PlayMemories Camera Apps 相机上稳健运行，实现 19/19 项自动化测试 100% 全通！
 
@@ -42,7 +42,7 @@ DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod)
 ```
 """
 
-def publish_release(token, tag="v1.5.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v1.6.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 

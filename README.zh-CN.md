@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.5.0--B2.3-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.6.0--B2.4-orange?style=flat-square" alt="Version">
 </p>
 
 通过底层硬件 ISP Hook 逆向技术，将索尼官方「照片效果+ (Picture Effect+)」应用深度改造为原生级**「理光相机」**。直接将理光 GR 经典胶片色彩的 **前置硬件白平衡偏置 (WB Shift)、1024 阶非线性 Gamma 曲线 (内嵌 EV 补偿) 与 3×3 RGB 颜色矩阵** 协同写入相机底层硬件寄存器，重现理光 GR 经典的高低光分色 (Split Toning) 与胶片色彩厚重感，实现**零快门延迟、EVF/LCD 实时取景无拖影、原生高速连拍**的直出胶片体验。
@@ -18,6 +18,10 @@
 ---
 
 ## 🌟 核心特性与亮点
+
+- 📸 **突破限制：全面解锁 RAW+JPEG 与纯 RAW 拍摄**:
+  - 彻底打破索尼官方照片效果应用仅支持保存 JPEG 的硬编码限制；
+  - 在画质菜单中注入 `RAW与JPEG` 及 `RAW` 选项，按下快门瞬间即可同时记录理光直出胶片效果 JPEG 与索尼 14-bit 原生无损 ARW 原始负片，快拍出图与后期精修两不误。
 
 - 🛡️ **PMCA 全机型硬件防御性架构与平滑降级**:
   - 深度适配所有 PMCA 世代相机：全面支持 PMCA 一代（Android 2.3.7 / API 10：A7、A7R、A6000、NEX-5R/6）与 PMCA 二代（Android 4.1.2 / API 16：A6300、A6500、A7M2、A7R2、RX100 系列），在不支持 10-bit 伽马表或色彩矩阵的老机型上平滑降级，绝不报 `NoSuchMethodError` 崩溃；

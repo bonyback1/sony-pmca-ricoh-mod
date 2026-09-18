@@ -743,6 +743,33 @@ def patch_app_name_smali(app_smali_path):
             f.write(content)
         print("Successfully injected cold boot pop-color reset in PictureEffectPlus.smali (BootFactor.LUNCHER)")
 
+def patch_picture_quality_smali(pqc_path):
+    print(f"Patching {pqc_path}...")
+    with open(pqc_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    target = """    invoke-static {v6}, Lcom/sony/imaging/app/util/AvailableInfo;->isAvailable([Ljava/lang/Object;)Z
+
+    move-result v6"""
+
+    repl = """    invoke-static {v6}, Lcom/sony/imaging/app/util/AvailableInfo;->isAvailable([Ljava/lang/Object;)Z
+
+    move-result v6
+
+    invoke-static {v3, v6}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->filterQualityAvailability(Ljava/lang/String;Z)Z
+
+    move-result v6"""
+
+    if target in content and "filterQualityAvailability" not in content:
+        content = content.replace(target, repl, 1)
+        with open(pqc_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print("Successfully injected filterQualityAvailability in PictureQualityController.smali")
+    elif "filterQualityAvailability" in content:
+        print("filterQualityAvailability already present in PictureQualityController.smali")
+    else:
+        print("Warning: target not found in PictureQualityController.smali")
+
 def run_cmd(cmd, cwd=None):
     res = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     if res.returncode != 0:
@@ -816,6 +843,12 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
             patch_key_converter_smali(key_converter_smali)
         else:
             print("Warning: KeyConverter.smali not found, skipping key converter patch.")
+
+        pqc_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'base', 'shooting', 'camera', 'PictureQualityController.smali')
+        if os.path.exists(pqc_smali):
+            patch_picture_quality_smali(pqc_smali)
+        else:
+            print("Warning: PictureQualityController.smali not found, skipping quality patch.")
 
         # Step 4: Update MenuData.xml
         print("==> [4/7] Updating filter names in MenuData.xml ...")

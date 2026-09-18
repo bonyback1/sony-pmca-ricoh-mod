@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.5.0--B2.3-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.6.0--B2.4-orange?style=flat-square" alt="Version">
 </p>
 
 Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into a native-level **"Ricoh Camera"** through low-level hardware ISP hook and reverse engineering. By directly programming the **pre-ISP hardware White Balance shifts (LB/CC), 1024-point non-linear Gamma tone curves (with baked EV compensation), and row-sum normalized 3×3 RGB color matrices** into camera hardware registers, it faithfully reproduces the signature Ricoh GR split toning and filmic weight—delivering **zero shutter lag, artifact-free real-time EVF/LCD preview, and native high-speed continuous burst shooting**.
@@ -18,6 +18,10 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
 ---
 
 ## 🌟 Key Features & Highlights
+
+- 📸 **RAW & JPEG Dual Format Unlocked**:
+  - Bypasses Sony's original restriction that artificially limited Picture Effect+ to JPEG only.
+  - Injects `RAW & JPEG` and `RAW` quality options into the camera's image format menu, enabling simultaneous recording of the instant Ricoh film simulation JPEG and the untouched 14-bit ARW digital negative.
 
 - 🛡️ **Universal PMCA Hardware Compatibility & Defensive HAL Architecture**:
   - Engineered with defensive runtime HAL probing and non-rethrowing exception handlers: flawlessly runs across **all PMCA camera generations**, including PMCA Gen 1 (Android 2.3.7 / API 10: NEX-5R/6, A7, A7R, A6000) and PMCA Gen 2 (Android 4.1.2 / API 16: A6300, A6500, A7M2, A7R2, RX100 M3/M4/M5). Older bodies gracefully degrade without `NoSuchMethodError` crashes.

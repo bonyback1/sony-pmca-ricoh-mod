@@ -46,5 +46,12 @@ unsigned.apk
 .agents/
 
 
-# Local scratch scripts
+# Local scratch scripts & independent experiments
 scripts/install_recipelab.sh
+scripts/install_focus_bracket.sh
+focus_bracket/
+tools/patch_v160_direct.py
+tools/testbench/*focus_bracket*
+tools/testbench/*reflection*
+tools/testbench/*adversarial*
+tools/testbench/TestFocusDriveListenerReflectionStress.java

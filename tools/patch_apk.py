@@ -883,7 +883,7 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         print("  2. 理光负片    (Ricoh Negative Film)")
         print("  3. 高对比黑白  (Ricoh High Contrast B&W)")
         print("  4. 森山大道风  (Moriyama Daido Style)")
-        print("  5. 正负逆冲    (Ricoh Cross Process)")
+        print("  5. 麦凯瑞 Kodachrome (Steve McCurry Kodachrome)")
         print("\nInstall to camera using: ./scripts/install.sh <CAMERA_IP>")
         print("=" * 60 + "\n")
 

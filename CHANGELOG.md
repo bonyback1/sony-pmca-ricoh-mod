@@ -11,6 +11,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-09-29 (B2.5)
+
+### Added & Enhanced (Steve McCurry Kodachrome Documentary Film Profile)
+- **Steve McCurry Kodachrome 64/25 Profile (Preset Slot 5 Upgrade)**:
+  - Replaced legacy Ricoh Cross Process with an authentic documentary film profile inspired by Magnum photographer Steve McCurry and Kodak Kodachrome 64/25 slide film.
+  - **Pure Slide Film Black Floor ($D_{\min} = 0$)**: Eliminated lifted milky fog in shadows, establishing deep, inky reversal-film blacks with pristine contrast.
+  - **1024-Point Non-Linear Tone Curve**: Engineered custom Gamma curve with baked-in -0.33 EV underexposure to densify midtones and shadow gradations, combined with a 1.35 contrast slope and gentle highlight roll-off.
+  - **Calibrated Kodachrome 64 Color Matrix**: Decomposed and mapped asymmetric color matrix `[1115, -87, -4, 31, 1011, -18, 9, 62, 953]` directly into hardware registers, delivering signature warm golden-amber highlights, vivid reds/yellows, and deep cyan-leaning skies.
+  - **Pre-ISP Hardware White Balance Offset**: Embedded hardware LB=+2 (warm amber light balance) shift, infusing scenes with Steve McCurry's hallmark "golden hour" warmth and rich skin tones.
+  - **Tri-Lingual Localization**: Injected runtime adaptive titles and guides across camera dials, OSD badges, and help menus:
+    - English: `Steve McCurry` / `Steve McCurry Kodachrome documentary film profile`
+    - Traditional Chinese: `麥凱瑞 Kodachrome` / `馬格南大師 Steve McCurry 經典 Kodachrome 濃郁暖調紀實底片色彩`
+    - Simplified Chinese: `麦凯瑞 Kodachrome` / `马格南大师 Steve McCurry 经典 Kodachrome 浓郁暖调纪实胶片色彩`
+  - **Hardware Neutralization Guarantee**: Enforced `sIdentityMatrix` reset and register restoration upon preset switching or app exit, preventing unwanted color contamination across camera restarts.
+
 ## [1.6.0] - 2026-09-18 (B2.4)
 
 ### Added & Enhanced (RAW & JPEG Dual Format Unlocked)

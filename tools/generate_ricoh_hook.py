@@ -56,8 +56,8 @@ def gen_curve_daido():
     return make_filmic_curve(slope=2.38, toe_lift=0, shoulder_max=1023, center=0.50, ev_offset=-0.33)
 
 def gen_curve_xpro():
-    # Ricoh Cross Process: vivid contrast with cross-process tones (slope=1.30, toe_lift=8)
-    return make_filmic_curve(slope=1.30, toe_lift=8, shoulder_max=1018, center=0.46, ev_offset=0.0)
+    # Steve McCurry Kodachrome: dense filmic shadows (-0.33 EV), rich contrast
+    return make_filmic_curve(slope=1.35, toe_lift=0, shoulder_max=1020, center=0.46, ev_offset=-0.33)
 
 curves = {
     'pos': pts_to_bytes(gen_curve_pos()),
@@ -140,7 +140,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     fill-array-data v1, :array_daido_matrix
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sMoriyamaMatrix:[I
 
-    # 5. Cross Process Matrix (1130, -86, -20, 70, 1070, -116, -60, 30, 1054)
+    # 5. Steve McCurry Kodachrome 64 Matrix (1115, -87, -4, 31, 1011, -18, 9, 62, 953)
     new-array v1, v0, [I
     fill-array-data v1, :array_xpro_matrix
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCrossProcessMatrix:[I
@@ -206,15 +206,15 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 
     :array_xpro_matrix
     .array-data 4
-        0x475
-        -0x45
-        -0x30
-        0x8
-        0x407
-        -0xf
-        -0x13
-        0x29
-        0x3ea
+        0x45b
+        -0x57
+        -0x4
+        0x1f
+        0x3f3
+        -0x12
+        0x9
+        0x3e
+        0x3b9
     .end array-data
 
     :array_id_matrix
@@ -506,7 +506,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_zero
-    const/4 v0, -0x3
+    const/4 v0, 0x2
     return v0
 
     :cond_zero
@@ -537,7 +537,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :cond_zero
-    const/4 v0, 0x2
+    const/4 v0, 0x0
     return v0
 
     :cond_zero
@@ -1066,15 +1066,15 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     move-result v0
     if-eqz v0, :cond_check_rawjpeg
     if-nez v1, :cond_xpro_zh
-    const-string v0, "Cross Process"
+    const-string v0, "Steve McCurry"
     return-object v0
     :cond_xpro_zh
     const/4 v0, 0x1
     if-ne v1, v0, :cond_xpro_cn
-    const-string v0, "\u6b63\u8ca0\u9006\u6c96"
+    const-string v0, "\u9ea5\u51f1\u745e Kodachrome"
     return-object v0
     :cond_xpro_cn
-    const-string v0, "\u6b63\u8d1f\u9006\u51b2"
+    const-string v0, "\u9ea6\u51ef\u745e Kodachrome"
     return-object v0
 
     :cond_check_rawjpeg
@@ -1193,15 +1193,15 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     move-result v0
     if-eqz v0, :cond_check_guide_rawjpeg
     if-nez v1, :cond_guide_xpro_zh
-    const-string v0, "Ricoh Cross Process unique tone effect"
+    const-string v0, "Steve McCurry Kodachrome documentary film profile"
     return-object v0
     :cond_guide_xpro_zh
     const/4 v0, 0x1
     if-ne v1, v0, :cond_guide_xpro_cn
-    const-string v0, "\u6b63\u8ca0\u9006\u6c96\u7368\u7279\u8272\u5f69\u53cd\u6c96\u6548\u679c (Ricoh Cross Process)"
+    const-string v0, "\u99ac\u683c\u5357\u5927\u5e2b Steve McCurry \u7d93\u5178 Kodachrome \u6fc3\u90c1\u6696\u8abf\u7d00\u5be6\u81a0\u7247\u8272\u5f69"
     return-object v0
     :cond_guide_xpro_cn
-    const-string v0, "\u6b63\u8d1f\u9006\u51b2\u72ec\u7279\u8272\u5f69\u53cd\u51b2\u6548\u679c (Ricoh Cross Process)"
+    const-string v0, "\u9a6c\u683c\u5357\u5927\u5e08 Steve McCurry \u7ecf\u5178 Kodachrome \u6d53\u90c1\u6696\u8c03\u7eaa\u5b9e\u80f6\u7247\u8272\u5f69"
     return-object v0
 
     :cond_check_guide_rawjpeg

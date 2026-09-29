@@ -15,22 +15,71 @@ import argparse
 REPO = "bonyback1/sony-pmca-ricoh-mod"
 API_URL = f"https://api.github.com/repos/{REPO}/releases"
 
-DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.6.0 (B2.4) 发布
+DEFAULT_BODY = """<p align="center">
+  <strong><a href="#english">English</a></strong> |
+  <strong><a href="#简体中文">简体中文</a></strong> |
+  <strong><a href="#繁體中文">繁體中文</a></strong>
+</p>
 
-本版本重磅推出 **PMCA 全机型跨代硬件兼容架构** 与 **四阶全方位自动化测试工作台**！通过底层防御性 HAL 探测、优雅降级与纯正 V1 签名 / 4 字节内存对齐，确保应用在初代与二代所有索尼 PlayMemories Camera Apps 相机上稳健运行，实现 19/19 项自动化测试 100% 全通！
+---
 
-#### 🌟 核心更新与调优
-- **PMCA 全机型硬件防御性架构与优雅降级**:
-  - 全面支持 PMCA 一代（Android 2.3.7 / API 10：A7、A7R、A6000、NEX-5R/6）与 PMCA 二代（Android 4.1.2 / API 16：A6300、A6500、A7M2、A7R2、RX100 系列）；
-  - 对所有二代专有硬件 API（`setRGBMatrix([I)V`、`createGammaTable()`、`setExtendedGammaTable()`）引入防御性 `try-catch` 与非重掷回退机制，在不支持 10-bit 伽马表或色彩矩阵的老机型上平滑降级至基础 ISP 参数控制，杜绝 `NoSuchMethodError` 崩溃；
-  - 深度防护脆弱 HAL 硬件寄存器（`setColorMode`、`setDROMode`、`setHDRMode`），消除机身固件拒绝导致的相机线程崩溃；
-  - 严格保障 DMA 内存安全生命周期：`GammaTable.release()` 无论成功或异常分支均百分百触发，消除内核 DMA 泄漏隐患。
-- **纯正 PMCA 兼容 V1 JAR 签名器与内置 4 字节 ZipAlign 引擎**:
-  - 使用专用 `sign_apk.py`（基于 OpenSSL `smime -sign -noattr -binary`）生成纯净 V1 JAR 签名，杜绝 v2/v3 签名块与 CMS 签名属性导致的 `INSTALL_PARSE_FAILED_NO_CERTIFICATES`；
-  - 签名引擎原生内置纯 Python 4 字节内存对齐（ZipAlign），确保 `resources.arsc` 等所有存储资源严格对齐；
-  - 复用项目调试证书（`debug.keystore` -> `tools/debug.pem`），支持免卸载直接覆盖升级。
-- **四阶全方位自动化测试工作台 (`tools/testbench/`)**:
-  - Tier 1（Dalvik 字节码）、Tier 2（PMCA 框架符号与 HAL 安全）、Tier 3（转盘与按键人体工程学）、Tier 4（V1 签名与打包合规），**19/19 项检查全部通过 (100% PASS)**。
+<h3 id="english">English</h3>
+
+### Sony PMCA Ricoh Camera Mod v1.7.0 (B2.5) Released
+
+This release introduces the **Steve McCurry Kodachrome Documentary Film Profile**, completely overhauling preset slot 5 with legendary slide film rendering, alongside our signature RAW+JPEG dual-output pipeline and universal PMCA hardware architecture!
+
+#### 🌟 Key Highlights & Features
+- **Steve McCurry Kodachrome 64/25 Documentary Film Profile (Preset Slot 5)**:
+  - Replaces legacy Ricoh Cross Process with an authentic documentary film profile inspired by Magnum master photographer Steve McCurry and Kodak Kodachrome 64/25.
+  - **Pure Slide Film Black Floor ($D_{\min} = 0$)**: Strips away lifted milky fog in shadows, delivering deep, punchy slide film contrast.
+  - **1024-Point Non-Linear Tone Curve**: Custom Gamma curve with baked-in -0.33 EV underexposure to densify midtone and shadow gradations, combined with a 1.35 contrast slope and natural highlight roll-off.
+  - **Calibrated Kodachrome 64 Hardware Color Matrix**: Decomposed asymmetric RGB matrix `[1115, -87, -4, 31, 1011, -18, 9, 62, 953]` mapped directly to camera hardware registers, yielding signature rich primary reds/yellows, golden highlights, and deep cyan skies.
+  - **Pre-ISP Hardware White Balance Offset**: Embedded LB=+2 (warm amber light balance) shift, recreating Steve McCurry's hallmark "golden hour" warmth and rich skin tones celebrated in *National Geographic*.
+  - **Zero Color Contamination**: Enforced `sIdentityMatrix` hardware reset upon filter switching or exit, preventing persistent color shifts.
+- **Tri-Lingual Zero-Config Adaptive Engine**:
+  - English: `Steve McCurry` / `Steve McCurry Kodachrome documentary film profile`
+  - 繁體中文: `麥凱瑞 Kodachrome` / `馬格南大師 Steve McCurry 經典 Kodachrome 濃郁暖調紀實底片色彩`
+  - 简体中文: `麦凯瑞 Kodachrome` / `马格南大师 Steve McCurry 经典 Kodachrome 浓郁暖调纪实胶片色彩`
+- **Inherited Core Capabilities**:
+  - Full RAW + JPEG and pure RAW capture modes unlocked.
+  - Authentic Ricoh GR III 3D LUT decomposition (Positive Film, Negative Film, High Contrast B&W).
+  - Universal PMCA cross-generation compatibility (A7, A6000, A6300, A6500, A7M2, A7R2, RX100 series).
+  - 100% pass rate (19/19 checks) on the automated 4-tier PMCA verification testbench.
+
+#### 📦 Attachments
+- `PictureEffectPlus_Ricoh.apk`: Production signed release APK (Pure V1 JAR signature + 4-byte ZipAlign).
+- `Ricoh_Camera.apk`: Exact mirror of the production APK.
+
+#### 🚀 Installation
+```bash
+./scripts/install.sh <CAMERA_IP> PictureEffectPlus_Ricoh.apk
+```
+
+---
+
+<h3 id="简体中文">简体中文</h3>
+
+### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.7.0 (B2.5) 发布
+
+本版本重磅推出 **Steve McCurry 麦凯瑞 Kodachrome 传奇纪实胶片色彩**，彻底重塑 5 号预设位，配合 RAW+JPEG 双格式解锁与全机型硬件兼容架构，带来极致的马格南人文纪实直出体验！
+
+#### 🌟 核心更新与亮点
+- **麦凯瑞 Kodachrome 64/25 传奇纪实反转片色彩 (5号预设位重塑)**:
+  - 彻底淘汰原版实用度较低的正负逆冲 (Cross Process) 滤镜，升级为致敬马格南摄影大师 Steve McCurry 与 Kodak Kodachrome 64/25 的传奇纪实色彩；
+  - **极致纯净反转片黑位 ($D_{\min} = 0$)**: 彻底清除暗部雾灰发白浮层，重现反转片标志性的深邃油润纯黑与扎实反差；
+  - **1024 阶非线性微曲率 Gamma 曲线**: 定制烘焙 -0.33 EV 曝光压暗以大幅增加暗部与中灰阶色彩密度，搭配 1.35 陡峭反差坡度与优雅高光滚降；
+  - **精调 Kodachrome 64 硬件颜色矩阵**: 将非对称柯达色度矩阵 `[1115, -87, -4, 31, 1011, -18, 9, 62, 953]` 写入硬件寄存器，还原浓郁鲜艳的红黄原色、温暖金色高光与独特的青蓝天空；
+  - **前置硬件白平衡偏置**: 注入硬件级 LB=+2 暖琥珀色温偏移，完美再现《国家地理》经典「黄金时刻」暖调氛围与极具戏剧张力的人文肤色；
+  - **硬件色彩中立性防御**: 强化 `sIdentityMatrix` 硬件复位机制，确保切换滤镜或退出应用时硬件寄存器彻底归零，绝不造成机身偏色。
+- **三语自适应机身菜单与指南**:
+  - 英文：`Steve McCurry` / `Steve McCurry Kodachrome documentary film profile`
+  - 繁体中文：`麥凱瑞 Kodachrome` / `馬格南大師 Steve McCurry 經典 Kodachrome 濃郁暖調紀實底片色彩`
+  - 简体中文：`麦凯瑞 Kodachrome` / `马格南大师 Steve McCurry 经典 Kodachrome 浓郁暖调纪实胶片色彩`
+- **继承特性**:
+  - 保持 RAW+JPEG 与纯 RAW 双格式保存能力；
+  - 保持真·理光 GR3 3D LUT 正片、负片、高对比黑白逆向色彩；
+  - 兼容 PMCA 一代与二代全部微单/黑卡机型，四阶测试台 19/19 项 100% 全通。
 
 #### 📦 附件说明
 - `PictureEffectPlus_Ricoh.apk`：已通过 19 项跨机型测试台验证的正式安装包（纯 V1 签名 + 4 字节对齐）。
@@ -40,9 +89,43 @@ DEFAULT_BODY = """### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod)
 ```bash
 ./scripts/install.sh <相机IP> PictureEffectPlus_Ricoh.apk
 ```
+
+---
+
+<h3 id="繁體中文">繁體中文</h3>
+
+### 索尼相機理光底片濾鏡模組 (Sony PMCA Ricoh Mod) v1.7.0 (B2.5) 發布
+
+本版本重磅推出 **Steve McCurry 麥凱瑞 Kodachrome 傳奇紀實底片色彩**，徹底重塑 5 號預設位，配合 RAW+JPEG 雙格式解鎖與全機型硬體相容架構，帶來極致的馬格南人文紀實直出體驗！
+
+#### 🌟 核心更新與亮點
+- **麥凱瑞 Kodachrome 64/25 傳奇紀實正片色彩 (5號預設位重塑)**:
+  - 徹底淘汰原版實用度較低的正負逆沖 (Cross Process) 濾鏡，升級為致敬馬格南攝影大師 Steve McCurry 與 Kodak Kodachrome 64/25 的傳奇紀實色彩；
+  - **極致純淨正片黑位 ($D_{\min} = 0$)**: 徹底清除暗部霧灰泛白浮層，重現正片標誌性的深邃油潤純黑與扎實反差；
+  - **1024 階非線性微曲率 Gamma 曲線**: 定制烘焙 -0.33 EV 曝光壓暗以大幅增加暗部與中階色彩密度，搭配 1.35 陡峭反差坡度與優雅高光滾降；
+  - **精調 Kodachrome 64 硬體顏色矩陣**: 將非對稱柯達彩度矩陣 `[1115, -87, -4, 31, 1011, -18, 9, 62, 953]` 寫入硬體暫存器，還原濃郁鮮豔的紅黃原色、溫暖金色高光與獨特的青藍天空；
+  - **前置硬體白平衡偏移**: 注入硬體級 LB=+2 暖琥珀色溫偏移，完美再現《國家地理》經典「黃金時刻」暖調氛圍與極具戲劇張力的人文膚色；
+  - **硬體色彩中立性防禦**: 強化 `sIdentityMatrix` 硬體復位機制，確保切換濾鏡或退出應用程式時硬體暫存器徹底歸零，絕不造成機身色偏。
+- **三語自適應機身選單與指南**:
+  - 英文：`Steve McCurry` / `Steve McCurry Kodachrome documentary film profile`
+  - 繁體中文：`麥凱瑞 Kodachrome` / `馬格南大師 Steve McCurry 經典 Kodachrome 濃郁暖調紀實底片色彩`
+  - 簡體中文：`麦凯瑞 Kodachrome` / `马格南大师 Steve McCurry 经典 Kodachrome 浓郁暖调纪实胶片色彩`
+- **繼承特性**:
+  - 保持 RAW+JPEG 與純 RAW 雙格式儲存能力；
+  - 保持真·理光 GR3 3D LUT 正片、負片、高對比黑白逆向色彩；
+  - 相容 PMCA 一代與二代全部微單眼/黑卡機型，四階測試台 19/19 項 100% 全通。
+
+#### 📦 附件說明
+- `PictureEffectPlus_Ricoh.apk`：已通過 19 項跨機型測試台驗證的正式安裝包（純 V1 簽名 + 4 位元組對齊）。
+- `Ricoh_Camera.apk`：同上安裝包副本。
+
+#### 🚀 安裝方式
+```bash
+./scripts/install.sh <相機IP> PictureEffectPlus_Ricoh.apk
+```
 """
 
-def publish_release(token, tag="v1.6.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v1.7.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 
@@ -52,7 +135,7 @@ def publish_release(token, tag="v1.6.0", apk_path="PictureEffectPlus_Ricoh.apk",
         "User-Agent": "Sony-PMCA-Publisher"
     }
 
-    title = title or f"{tag} (B2.2) - 全机型跨代硬件兼容 (A7/A6000/A6300/RX100) 与四阶自动化测试工作台"
+    title = title or f"{tag} (B2.5) - 麦凯瑞 Kodachrome 纪实胶片色彩与 RAW+JPEG 全格式支持"
     body = body or DEFAULT_BODY
 
     # 1. Check if release already exists for this tag
@@ -118,7 +201,7 @@ def publish_release(token, tag="v1.6.0", apk_path="PictureEffectPlus_Ricoh.apk",
 def main():
     parser = argparse.ArgumentParser(description="Publish Release to GitHub")
     parser.add_argument('-t', '--token', default=os.environ.get('GITHUB_TOKEN'), help="GitHub Personal Access Token")
-    parser.add_argument('--tag', default="v1.1.4", help="Release tag (default: v1.1.4)")
+    parser.add_argument('--tag', default="v1.7.0", help="Release tag (default: v1.7.0)")
     parser.add_argument('--apk', default="PictureEffectPlus_Ricoh.apk", help="Path to APK binary")
     args = parser.parse_args()
 

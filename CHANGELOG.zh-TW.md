@@ -11,6 +11,22 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 並嚴格遵循 [語意化版本規範 (SemVer)](https://semver.org/lang/zh-TW/)。
 
+## [1.8.0] - 2026-10-02 (B2.6)
+
+### 新增與增強 (驅動模式高速連拍全面解鎖 & 官方真·徠卡麥凱瑞紀實色彩)
+- **驅動模式與高速連拍全線解鎖 (突破官方連拍限制)**:
+  - 徹底打破官方相片效果應用程式在複雜濾鏡（水彩/原5號位、豐富色調黑白/3號位）下鎖定單張拍攝的底層程式碼限制；
+  - 在 `PictureEffectPlusController.smali` 中剔除 `ITEM_ID_SA_USE_EFFECT` 禁用名單（移除 `watercolor` 與 `richtone-mono`）；
+  - 在 `PictureEffectPlusDriveModeController.smali` 中注入 `RicohHook.isRicohPreset()` 判斷邏輯，實現**全套 5 款理光底片預設全線支援高速連拍 (Hi/Mid/Lo)、速度優先連拍、定時自拍與包圍曝光**。
+- **真·徠卡麥凱瑞紀實色彩 (Leica Steve McCurry) 重磅升級 (5號預設位)**:
+  - 直接從官方母版 `Leica_SteveMcCurry.cube` 逆向數學分解，賦予 5 號位純正徠卡影調；
+  - **精調徠卡 3×3 硬體顏色矩陣**: 注入原生硬體顏色矩陣 `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`，再現經典徠卡「德味暖金」色調與馬格南大師 Steve McCurry 標誌性紀實氛圍，無需人工 WB 偏移 (LB=0) 即可呈現自然純正的人文膚色與色彩厚重感；
+  - **1024 階非線性正片 Gamma 曲線**: 純正正片深黑底色 ($D_{\min}=0$)，搭配 1.35 陡峭反差坡度，暗部扎實油潤，高光滾降過渡自然；
+  - **三語自適應機身選單與指南**:
+    - 英文：`Leica McCurry` / `Authentic Leica Steve McCurry warm documentary profile`
+    - 繁體中文：`徠卡麥凱瑞` / `徠卡官方 Steve McCurry 經典暖金德味紀實色彩`
+    - 簡體中文：`徕卡麦凯瑞` / `徕卡官方 Steve McCurry 经典暖金德味纪实色彩`
+
 ## [1.7.0] - 2026-09-29 (B2.5)
 
 ### 新增與增強 (麥凱瑞 Kodachrome 傳奇紀實底片色彩重磅登場)

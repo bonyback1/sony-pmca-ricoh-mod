@@ -25,22 +25,23 @@ DEFAULT_BODY = """<p align="center">
 
 <h3 id="english">English</h3>
 
-### Sony PMCA Ricoh Camera Mod v1.7.0 (B2.5) Released
+### Sony PMCA Ricoh Camera Mod v1.8.0 (B2.6) Released
 
-This release introduces the **Steve McCurry Kodachrome Documentary Film Profile**, completely overhauling preset slot 5 with legendary slide film rendering, alongside our signature RAW+JPEG dual-output pipeline and universal PMCA hardware architecture!
+This release introduces **Continuous Burst Shooting & Full Drive Mode Unlock** across all film simulation presets, alongside the **Authentic Leica Steve McCurry Documentary Profile** mathematically decomposed directly from genuine Leica 3D LUT science!
 
 #### 🌟 Key Highlights & Features
-- **Steve McCurry Kodachrome 64/25 Documentary Film Profile (Preset Slot 5)**:
-  - Replaces legacy Ricoh Cross Process with an authentic documentary film profile inspired by Magnum master photographer Steve McCurry and Kodak Kodachrome 64/25.
-  - **Pure Slide Film Black Floor ($D_{\min} = 0$)**: Strips away lifted milky fog in shadows, delivering deep, punchy slide film contrast.
-  - **1024-Point Non-Linear Tone Curve**: Custom Gamma curve with baked-in -0.33 EV underexposure to densify midtone and shadow gradations, combined with a 1.35 contrast slope and natural highlight roll-off.
-  - **Calibrated Kodachrome 64 Hardware Color Matrix**: Decomposed asymmetric RGB matrix `[1115, -87, -4, 31, 1011, -18, 9, 62, 953]` mapped directly to camera hardware registers, yielding signature rich primary reds/yellows, golden highlights, and deep cyan skies.
-  - **Pre-ISP Hardware White Balance Offset**: Embedded LB=+2 (warm amber light balance) shift, recreating Steve McCurry's hallmark "golden hour" warmth and rich skin tones celebrated in *National Geographic*.
-  - **Zero Color Contamination**: Enforced `sIdentityMatrix` hardware reset upon filter switching or exit, preventing persistent color shifts.
-- **Tri-Lingual Zero-Config Adaptive Engine**:
-  - English: `Steve McCurry` / `Steve McCurry Kodachrome documentary film profile`
-  - 繁體中文: `麥凱瑞 Kodachrome` / `馬格南大師 Steve McCurry 經典 Kodachrome 濃郁暖調紀實底片色彩`
-  - 简体中文: `麦凯瑞 Kodachrome` / `马格南大师 Steve McCurry 经典 Kodachrome 浓郁暖调纪实胶片色彩`
+- **Drive Mode & Continuous Burst Shooting Full Unlock**:
+  - Eliminated Sony's artificial restrictions in Picture Effect+ that prevented continuous shooting and burst drive modes on specific presets.
+  - Removed `watercolor` and `richtone-mono` from the restrictive `ITEM_ID_SA_USE_EFFECT` exclusion list.
+  - Hooked `PictureEffectPlusDriveModeController.smali` (`isAvailable(Ljava/lang/String;)Z`), unlocking all drive modes (Continuous Hi/Mid/Lo, Speed Priority Continuous, Self-timer, Bracket) across **all 5 film presets**.
+- **Authentic Leica Steve McCurry Documentary Profile (Preset Slot 5 Upgrade)**:
+  - Decomposed tone curve and color matrix mathematically directly from genuine `Leica_SteveMcCurry.cube`.
+  - **Calibrated Leica Color Matrix**: Implemented hardware 3×3 RGB matrix `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]` capturing the iconic warm golden Leica color science ("德味暖金"), vibrant primaries, and natural skin tones with neutral pre-ISP LB=0 balance.
+  - **1024-Point Gamma Curve**: 10-bit non-linear tone curve with pure slide film black level ($D_{\min} = 0$), dense shadow gradations, and a 1.35 contrast slope.
+  - **Tri-Lingual Localization**: Updated dial titles, OSD labels, and guide descriptions:
+    - English: `Leica McCurry` / `Authentic Leica Steve McCurry warm documentary profile`
+    - Traditional Chinese: `徠卡麥凱瑞` / `徠卡官方 Steve McCurry 經典暖金德味紀實色彩`
+    - Simplified Chinese: `徕卡麦凯瑞` / `徕卡官方 Steve McCurry 经典暖金德味纪实色彩`
 - **Inherited Core Capabilities**:
   - Full RAW + JPEG and pure RAW capture modes unlocked.
   - Authentic Ricoh GR III 3D LUT decomposition (Positive Film, Negative Film, High Contrast B&W).
@@ -60,22 +61,23 @@ This release introduces the **Steve McCurry Kodachrome Documentary Film Profile*
 
 <h3 id="简体中文">简体中文</h3>
 
-### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.7.0 (B2.5) 发布
+### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v1.8.0 (B2.6) 发布
 
-本版本重磅推出 **Steve McCurry 麦凯瑞 Kodachrome 传奇纪实胶片色彩**，彻底重塑 5 号预设位，配合 RAW+JPEG 双格式解锁与全机型硬件兼容架构，带来极致的马格南人文纪实直出体验！
+本版本重磅推出 **驱动模式高速连拍全面解锁** 与 **官方真·徕卡麦凯瑞纪实色彩**，突破官方对连拍的底层限制，配合 RAW+JPEG 双格式解锁与全机型硬件兼容架构，带来极致的德味与人文纪实拍摄体验！
 
 #### 🌟 核心更新与亮点
-- **麦凯瑞 Kodachrome 64/25 传奇纪实反转片色彩 (5号预设位重塑)**:
-  - 彻底淘汰原版实用度较低的正负逆冲 (Cross Process) 滤镜，升级为致敬马格南摄影大师 Steve McCurry 与 Kodak Kodachrome 64/25 的传奇纪实色彩；
-  - **极致纯净反转片黑位 ($D_{\min} = 0$)**: 彻底清除暗部雾灰发白浮层，重现反转片标志性的深邃油润纯黑与扎实反差；
-  - **1024 阶非线性微曲率 Gamma 曲线**: 定制烘焙 -0.33 EV 曝光压暗以大幅增加暗部与中灰阶色彩密度，搭配 1.35 陡峭反差坡度与优雅高光滚降；
-  - **精调 Kodachrome 64 硬件颜色矩阵**: 将非对称柯达色度矩阵 `[1115, -87, -4, 31, 1011, -18, 9, 62, 953]` 写入硬件寄存器，还原浓郁鲜艳的红黄原色、温暖金色高光与独特的青蓝天空；
-  - **前置硬件白平衡偏置**: 注入硬件级 LB=+2 暖琥珀色温偏移，完美再现《国家地理》经典「黄金时刻」暖调氛围与极具戏剧张力的人文肤色；
-  - **硬件色彩中立性防御**: 强化 `sIdentityMatrix` 硬件复位机制，确保切换滤镜或退出应用时硬件寄存器彻底归零，绝不造成机身偏色。
-- **三语自适应机身菜单与指南**:
-  - 英文：`Steve McCurry` / `Steve McCurry Kodachrome documentary film profile`
-  - 繁体中文：`麥凱瑞 Kodachrome` / `馬格南大師 Steve McCurry 經典 Kodachrome 濃郁暖調紀實底片色彩`
-  - 简体中文：`麦凯瑞 Kodachrome` / `马格南大师 Steve McCurry 经典 Kodachrome 浓郁暖调纪实胶片色彩`
+- **驱动模式与高速连拍全线解锁 (突破官方连拍限制)**:
+  - 彻底打破官方照片效果应用在复杂滤镜（水彩/原5号位、丰富色调黑白/3号位）下锁定单张拍摄的底层代码枷锁；
+  - 在 `PictureEffectPlusController.smali` 中剔除 `ITEM_ID_SA_USE_EFFECT` 禁用名单（移除 `watercolor` 与 `richtone-mono`）；
+  - 在 `PictureEffectPlusDriveModeController.smali` 中注入 `RicohHook.isRicohPreset()` 判断逻辑，实现**全套 5 款理光胶片预设全线支持高速连拍 (Hi/Mid/Lo)、速度优先连拍、定时自拍与阶段曝光**。
+- **真·徕卡麦凯瑞纪实色彩 (Leica Steve McCurry) 重磅升级 (5号预设位)**:
+  - 直接从官方母版 `Leica_SteveMcCurry.cube` 逆向数学分解，赋予 5 号位纯正徕卡影调；
+  - **精调徕卡 3×3 硬件颜色矩阵**: 注入原生硬件颜色矩阵 `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`，再现经典徕卡「德味暖金」色调与马格南大师 Steve McCurry 标志性纪实氛围，无需人工 WB 偏置 (LB=0) 即可呈现自然纯正的人文肤色与色彩厚重感；
+  - **1024 阶非线性反转片 Gamma 曲线**: 纯正反转片深黑底色 ($D_{\min}=0$)，搭配 1.35 陡峭反差坡度，暗部扎实油润，高光滚降过渡自然；
+  - **三语自适应机身菜单与指南**:
+    - 英文：`Leica McCurry` / `Authentic Leica Steve McCurry warm documentary profile`
+    - 繁体中文：`徠卡麥凱瑞` / `徠卡官方 Steve McCurry 經典暖金德味紀實色彩`
+    - 简体中文：`徕卡麦凯瑞` / `徕卡官方 Steve McCurry 经典暖金德味纪实色彩`
 - **继承特性**:
   - 保持 RAW+JPEG 与纯 RAW 双格式保存能力；
   - 保持真·理光 GR3 3D LUT 正片、负片、高对比黑白逆向色彩；
@@ -94,22 +96,23 @@ This release introduces the **Steve McCurry Kodachrome Documentary Film Profile*
 
 <h3 id="繁體中文">繁體中文</h3>
 
-### 索尼相機理光底片濾鏡模組 (Sony PMCA Ricoh Mod) v1.7.0 (B2.5) 發布
+### 索尼相機理光底片濾鏡模組 (Sony PMCA Ricoh Mod) v1.8.0 (B2.6) 發布
 
-本版本重磅推出 **Steve McCurry 麥凱瑞 Kodachrome 傳奇紀實底片色彩**，徹底重塑 5 號預設位，配合 RAW+JPEG 雙格式解鎖與全機型硬體相容架構，帶來極致的馬格南人文紀實直出體驗！
+本版本重磅推出 **驅動模式高速連拍全面解鎖** 與 **官方真·徠卡麥凱瑞紀實色彩**，突破官方對連拍的底層限制，配合 RAW+JPEG 雙格式解鎖與全機型硬體相容架構，帶來極致的德味與人文紀實拍攝體驗！
 
 #### 🌟 核心更新與亮點
-- **麥凱瑞 Kodachrome 64/25 傳奇紀實正片色彩 (5號預設位重塑)**:
-  - 徹底淘汰原版實用度較低的正負逆沖 (Cross Process) 濾鏡，升級為致敬馬格南攝影大師 Steve McCurry 與 Kodak Kodachrome 64/25 的傳奇紀實色彩；
-  - **極致純淨正片黑位 ($D_{\min} = 0$)**: 徹底清除暗部霧灰泛白浮層，重現正片標誌性的深邃油潤純黑與扎實反差；
-  - **1024 階非線性微曲率 Gamma 曲線**: 定制烘焙 -0.33 EV 曝光壓暗以大幅增加暗部與中階色彩密度，搭配 1.35 陡峭反差坡度與優雅高光滾降；
-  - **精調 Kodachrome 64 硬體顏色矩陣**: 將非對稱柯達彩度矩陣 `[1115, -87, -4, 31, 1011, -18, 9, 62, 953]` 寫入硬體暫存器，還原濃郁鮮豔的紅黃原色、溫暖金色高光與獨特的青藍天空；
-  - **前置硬體白平衡偏移**: 注入硬體級 LB=+2 暖琥珀色溫偏移，完美再現《國家地理》經典「黃金時刻」暖調氛圍與極具戲劇張力的人文膚色；
-  - **硬體色彩中立性防禦**: 強化 `sIdentityMatrix` 硬體復位機制，確保切換濾鏡或退出應用程式時硬體暫存器徹底歸零，絕不造成機身色偏。
-- **三語自適應機身選單與指南**:
-  - 英文：`Steve McCurry` / `Steve McCurry Kodachrome documentary film profile`
-  - 繁體中文：`麥凱瑞 Kodachrome` / `馬格南大師 Steve McCurry 經典 Kodachrome 濃郁暖調紀實底片色彩`
-  - 簡體中文：`麦凯瑞 Kodachrome` / `马格南大师 Steve McCurry 经典 Kodachrome 浓郁暖调纪实胶片色彩`
+- **驅動模式與高速連拍全線解鎖 (突破官方連拍限制)**:
+  - 徹底打破官方相片效果應用程式在複雜濾鏡（水彩/原5號位、豐富色調黑白/3號位）下鎖定單張拍攝的底層程式碼限制；
+  - 在 `PictureEffectPlusController.smali` 中剔除 `ITEM_ID_SA_USE_EFFECT` 禁用名單（移除 `watercolor` 與 `richtone-mono`）；
+  - 在 `PictureEffectPlusDriveModeController.smali` 中注入 `RicohHook.isRicohPreset()` 判斷邏輯，實現**全套 5 款理光底片預設全線支援高速連拍 (Hi/Mid/Lo)、速度優先連拍、定時自拍與包圍曝光**。
+- **真·徠卡麥凱瑞紀實色彩 (Leica Steve McCurry) 重磅升級 (5號預設位)**:
+  - 直接從官方母版 `Leica_SteveMcCurry.cube` 逆向數學分解，賦予 5 號位純正徠卡影調；
+  - **精調徠卡 3×3 硬體顏色矩陣**: 注入原生硬體顏色矩陣 `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`，再現經典徠卡「德味暖金」色調與馬格南大師 Steve McCurry 標誌性紀實氛圍，無需人工 WB 偏移 (LB=0) 即可呈現自然純正的人文膚色與色彩厚重感；
+  - **1024 階非線性正片 Gamma 曲線**: 純正正片深黑底色 ($D_{\min}=0$)，搭配 1.35 陡峭反差坡度，暗部扎實油潤，高光滾降過渡自然；
+  - **三語自適應機身選單與指南**:
+    - 英文：`Leica McCurry` / `Authentic Leica Steve McCurry warm documentary profile`
+    - 繁體中文：`徠卡麥凱瑞` / `徠卡官方 Steve McCurry 經典暖金德味紀實色彩`
+    - 簡體中文：`徕卡麦凯瑞` / `徕卡官方 Steve McCurry 经典暖金德味纪实色彩`
 - **繼承特性**:
   - 保持 RAW+JPEG 與純 RAW 雙格式儲存能力；
   - 保持真·理光 GR3 3D LUT 正片、負片、高對比黑白逆向色彩；
@@ -125,7 +128,7 @@ This release introduces the **Steve McCurry Kodachrome Documentary Film Profile*
 ```
 """
 
-def publish_release(token, tag="v1.7.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v1.8.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 
@@ -135,7 +138,7 @@ def publish_release(token, tag="v1.7.0", apk_path="PictureEffectPlus_Ricoh.apk",
         "User-Agent": "Sony-PMCA-Publisher"
     }
 
-    title = title or f"{tag} (B2.5) - 麦凯瑞 Kodachrome 纪实胶片色彩与 RAW+JPEG 全格式支持"
+    title = title or f"{tag} (B2.6) - 徕卡麦凯瑞 (Leica Steve McCurry) 与全滤镜高速连拍/驱动模式全面解锁"
     body = body or DEFAULT_BODY
 
     # 1. Check if release already exists for this tag
@@ -201,7 +204,7 @@ def publish_release(token, tag="v1.7.0", apk_path="PictureEffectPlus_Ricoh.apk",
 def main():
     parser = argparse.ArgumentParser(description="Publish Release to GitHub")
     parser.add_argument('-t', '--token', default=os.environ.get('GITHUB_TOKEN'), help="GitHub Personal Access Token")
-    parser.add_argument('--tag', default="v1.7.0", help="Release tag (default: v1.7.0)")
+    parser.add_argument('--tag', default="v1.8.0", help="Release tag (default: v1.8.0)")
     parser.add_argument('--apk', default="PictureEffectPlus_Ricoh.apk", help="Path to APK binary")
     args = parser.parse_args()
 

@@ -11,6 +11,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-10-02 (B2.6)
+
+### Added & Enhanced (Drive Mode Burst Unlock & Authentic Leica Steve McCurry Profile)
+- **Drive Mode & Continuous Burst Shooting Full Unlock**:
+  - Eliminated Sony's artificial restrictions in Picture Effect+ that prevented continuous shooting and burst drive modes on specific presets.
+  - Removed `watercolor` and `richtone-mono` from the restrictive `ITEM_ID_SA_USE_EFFECT` exclusion list in `PictureEffectPlusController.smali`.
+  - Injected `RicohHook.isRicohPreset()` check into `PictureEffectPlusDriveModeController.smali` (`isAvailable(Ljava/lang/String;)Z`), unlocking all drive modes (Continuous Hi/Mid/Lo, Speed Priority Continuous, Self-timer, Bracket) across **all 5 film presets**.
+- **Authentic Leica Steve McCurry Documentary Profile (Preset Slot 5 Upgrade)**:
+  - Decomposed tone curve and color matrix mathematically directly from genuine `Leica_SteveMcCurry.cube`.
+  - **Calibrated Leica Color Matrix**: Implemented hardware 3×3 RGB matrix `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]` capturing the iconic warm golden Leica color science ("德味暖金"), vibrant primaries, and natural skin tones with neutral pre-ISP LB=0 balance.
+  - **1024-Point Gamma Curve**: 10-bit non-linear tone curve with pure slide film black level ($D_{\min} = 0$), dense shadow gradations, and a 1.35 contrast slope.
+  - **Tri-Lingual Localization**: Updated dial titles, OSD labels, and guide descriptions:
+    - English: `Leica McCurry` / `Authentic Leica Steve McCurry warm documentary profile`
+    - Traditional Chinese: `徠卡麥凱瑞` / `徠卡官方 Steve McCurry 經典暖金德味紀實色彩`
+    - Simplified Chinese: `徕卡麦凯瑞` / `徕卡官方 Steve McCurry 经典暖金德味纪实色彩`
+
 ## [1.7.0] - 2026-09-29 (B2.5)
 
 ### Added & Enhanced (Steve McCurry Kodachrome Documentary Film Profile)

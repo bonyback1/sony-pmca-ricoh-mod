@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.7.0--B2.5-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.8.0--B2.6-orange?style=flat-square" alt="Version">
 </p>
 
 Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into a native-level **"Ricoh Camera"** through low-level hardware ISP hook and reverse engineering. By directly programming the **pre-ISP hardware White Balance shifts (LB/CC), 1024-point non-linear Gamma tone curves (with baked EV compensation), and row-sum normalized 3×3 RGB color matrices** into camera hardware registers, it faithfully reproduces the signature Ricoh GR split toning and filmic weight—delivering **zero shutter lag, artifact-free real-time EVF/LCD preview, and native high-speed continuous burst shooting**.
@@ -18,6 +18,10 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
 ---
 
 ## 🌟 Key Features & Highlights
+
+- ⚡ **Drive Mode & Continuous Burst Unlocked**:
+  - Bypasses Sony's artificial restrictions in Picture Effect+ that locked out drive modes (high-speed continuous burst, speed priority burst, bracket, and self-timers) on complex effects.
+  - Surgically removes restrictions from `ITEM_ID_SA_USE_EFFECT` and hooks `PictureEffectPlusDriveModeController.smali`, unlocking full continuous burst shooting across **all 5 film presets**.
 
 - 📸 **RAW & JPEG Dual Format Unlocked**:
   - Bypasses Sony's original restriction that artificially limited Picture Effect+ to JPEG only.
@@ -31,9 +35,9 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
 - 🌐 **Runtime Adaptive Multi-Language Engine (Zero-Config)**:
   - Dynamically perceives camera system locale via `Locale.getDefault()` without requiring separate APKs.
   - Seamlessly and automatically renders native translations across app launcher icons, live view OSD badges, option menus, dial scrolling indicators, and help guides:
-    - **English & International**: `Ricoh Camera`, `Ricoh GR Positive Film`, `Ricoh Negative Film`, `High Contrast B&W`, `Moriyama Daido B&W`, `Steve McCurry`.
-    - **繁體中文 (台灣 / 香港)**: `理光相機`, `理光 GR 正片`, `理光 負片`, `高對比黑白`, `森山大道風`, `麥凱瑞 Kodachrome`.
-    - **简体中文 (大陆)**: `理光相机`, `理光 GR 正片`, `理光 负片`, `高对比黑白`, `森山大道风`, `麦凯瑞 Kodachrome`.
+    - **English & International**: `Ricoh Camera`, `Ricoh GR Positive Film`, `Ricoh Negative Film`, `High Contrast B&W`, `Moriyama Daido B&W`, `Leica McCurry`.
+    - **繁體中文 (台灣 / 香港)**: `理光相機`, `理光 GR 正片`, `理光 負片`, `高對比黑白`, `森山大道風`, `徠卡麥凱瑞`.
+    - **简体中文 (大陆)**: `理光相机`, `理光 GR 正片`, `理光 负片`, `高对比黑白`, `森山大道风`, `徕卡麦凯瑞`.
 - 🌈 **Authentic Ricoh Split Toning & Color Reproduction**:
   - **Pre-ISP Hardware WB Shifts**: Injects precise LB (Light Balance / amber-blue) and CC (Color Compensation / green-magenta) offsets, providing a warm slide base or gentle vintage negative undertone. Automatically restores user original WB upon exiting the app.
   - **1024-Point Gamma Curve with Baked EV**: Baked -0.33 EV under-exposure in Positive Film and Moriyama B&W suppresses harsh blown-out highlights; baked +0.33 EV boost with lifted black floor in Negative Film replicates wide dynamic latitude analog print look.
@@ -43,7 +47,7 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
   - **Ricoh Negative Film**: Matte film tone curve with lifted black level (~36), low contrast, subtle warm cast, and graceful highlight roll-off.
   - **High Contrast B&W**: Accurate BT.601 luminance grayscale conversion combined with an aggressive S-curve, yielding an inky, high-density street look.
   - **Moriyama Daido Style**: Heavy red-filter weighted monochrome channel mix, darkening blue skies, producing dramatic grain structure and raw monochrome street tension.
-  - **Steve McCurry Kodachrome**: Authentic Magnum master Steve McCurry Kodachrome 64/25 documentary film profile. Replaces legacy cross-process with pure slide film blacks (D_min = 0, zero milky haze), baked-in -0.33 EV underexposure midtone shadow densification, steep slide contrast (slope 1.35), asymmetric Kodachrome 64 color matrix, and warm golden-hour light balance (LB=+2), delivering the iconic National Geographic saturated warmth and dramatic storytelling tones.
+  - **Leica Steve McCurry**: Authentic Leica Steve McCurry documentary film profile decomposed directly from `Leica_SteveMcCurry.cube`. Features classic Leica warm golden rendering ("德味暖金"), deep pure slide film blacks ($D_{\min} = 0$), rich shadow density, calibrated 3×3 RGB color matrix `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`, and natural human skin tones.
 - 🔄 **Hardware Color State Protection**: Automatically resets identity matrices, WB shift registers, and default Gamma curves upon filter switching or application exit, preventing any persistent color cast on camera restarts.
 
 ---

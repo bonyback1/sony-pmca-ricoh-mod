@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.7.0--B2.5-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.8.0--B2.6-orange?style=flat-square" alt="Version">
 </p>
 
 通过底层硬件 ISP Hook 逆向技术，将索尼官方「照片效果+ (Picture Effect+)」应用深度改造为原生级**「理光相机」**。直接将理光 GR 经典胶片色彩的 **前置硬件白平衡偏置 (WB Shift)、1024 阶非线性 Gamma 曲线 (内嵌 EV 补偿) 与 3×3 RGB 颜色矩阵** 协同写入相机底层硬件寄存器，重现理光 GR 经典的高低光分色 (Split Toning) 与胶片色彩厚重感，实现**零快门延迟、EVF/LCD 实时取景无拖影、原生高速连拍**的直出胶片体验。
@@ -18,6 +18,10 @@
 ---
 
 ## 🌟 核心特性与亮点
+
+- ⚡ **突破限制：全面解锁驱动模式与高速连拍**:
+  - 彻底打破官方照片效果应用对复杂效果锁定连拍、速度优先连拍、定时自拍与阶段曝光的限制；
+  - 剔除 `ITEM_ID_SA_USE_EFFECT` 禁用项并接管 `PictureEffectPlusDriveModeController.smali`，**全套 5 款胶片滤镜全线支持高速连拍与所有驱动模式**。
 
 - 📸 **突破限制：全面解锁 RAW+JPEG 与纯 RAW 拍摄**:
   - 彻底打破索尼官方照片效果应用仅支持保存 JPEG 的硬编码限制；
@@ -31,9 +35,9 @@
 - 🌐 **运行时自适应多语言引擎 (Locale 自动感知)**：
   - 基于 Android 底层 `Locale.getDefault()` 实时感知机身语言，无需安装不同版本 APK。
   - 应用桌面图标、取景界面 OSD、设置菜单、波轮切换浮动提示与帮助说明全自动无感切换：
-    - **英文/海外国际系统**：`Ricoh Camera`、`Ricoh GR Positive Film`、`Ricoh Negative Film`、`High Contrast B&W`、`Moriyama Daido B&W`、`Steve McCurry`
-    - **繁體中文系统 (台灣/香港)**：`理光相機`、`理光 GR 正片`、`理光 負片`、`高對比黑白`、`森山大道風`、`麥凱瑞 Kodachrome`
-    - **简体中文系统 (大陆)**：`理光相机`、`理光 GR 正片`、`理光 负片`、`高对比黑白`、`森山大道风`、`麦凯瑞 Kodachrome`
+    - **英文/海外国际系统**：`Ricoh Camera`、`Ricoh GR Positive Film`、`Ricoh Negative Film`、`High Contrast B&W`、`Moriyama Daido B&W`、`Leica McCurry`
+    - **繁體中文系统 (台灣/香港)**：`理光相機`、`理光 GR 正片`、`理光 負片`、`高對比黑白`、`森山大道風`、`徠卡麥凱瑞`
+    - **简体中文系统 (大陆)**：`理光相机`、`理光 GR 正片`、`理光 负片`、`高对比黑白`、`森山大道风`、`徕卡麦凯瑞`
 - 🌈 **真·理光高低光分色 (Split Toning) 与色彩重塑**：
   - **前置硬件 WB 偏移**：精准注入 LB (色温/琥珀偏置) 与 CC (色彩补偿)，赋予正片暖阳基底与负片泛黄温和胶片底色，退出应用自动完美复位用户原始 WB。
   - **1024 阶 Gamma 内嵌 EV 烘焙**：正片与森山大道风内嵌 -0.33 EV 曝光压暗烘焙压制高光死白，负片内嵌 +0.33 EV 提亮配合黑位抬升模拟大宽容度负片质感。
@@ -43,7 +47,7 @@
   - **理光 负片 (Ricoh Negative Film)**：胶片哑光曲线，黑位抬升至 36，柔和低对比微泛暖调，高光优雅滚降。
   - **高对比黑白 (High Contrast B&W)**：精准 BT.601 亮度灰度转换，大 S 反差曲线，呈现油墨般深邃质感。
   - **森山大道风 (Moriyama Daido Style)**：强红镜黑白通道加权，压暗天空，强化粗粝颗粒感与极致黑白张力。
-  - **麦凯瑞 Kodachrome (Steve McCurry Kodachrome)**：致敬马格南大师 Steve McCurry 经典 Kodachrome 64/25 传奇反转片色彩。彻底取代原版正负逆冲，带来极度纯净深邃的反转片纯黑底色 (D_min=0，绝无雾灰发白)、内嵌 -0.33 EV 曝光压暗与 1.35 陡峭反差强化暗部与中灰阶密度、非对称柯达色度矩阵与 LB=+2 黄金时刻暖琥珀色温偏置，再现国家地理标志性的浓郁暖调与极具戏剧张力的人文纪实胶片感。
+  - **徕卡麦凯瑞 (Leica Steve McCurry)**：直接逆向分解自真实的 `Leica_SteveMcCurry.cube`。呈现原汁原味的徕卡德味暖金影调与马格南大师 Steve McCurry 经典纪实色彩，具备反转片纯黑底色 ($D_{\min}=0$)、厚重暗部密度、精调 3×3 柯达色度矩阵 `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]` 与极其自然的人文肤色表现。
 - 🔄 **硬件色彩复位保障**：切换滤镜或退出应用时，自动复位单位矩阵、白平衡偏移及默认 Gamma 表，彻底防止相机机身色彩残留或偏色。
 
 ---

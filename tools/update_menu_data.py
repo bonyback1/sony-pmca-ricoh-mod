@@ -9,7 +9,7 @@ FILTERS = {
     'retro-photo': ('理光负片', '理光负片'),
     'richtone-mono': ('高对比黑白', '高对比黑白'),
     'rough-mono': ('森山大道风', '森山大道风'),
-    'watercolor': ('麦凯瑞 Kodachrome', '麦凯瑞 Kodachrome')
+    'watercolor': ('徕卡麦凯瑞', '徕卡麦凯瑞')
 }
 
 RICOH_ORDER = ['pop-color', 'retro-photo', 'richtone-mono', 'rough-mono', 'watercolor']

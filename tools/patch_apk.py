@@ -159,6 +159,16 @@ def patch_controller_smali(controller_path):
     else:
         print("Warning: target_backup not found in PictureEffectPlusController.smali")
 
+    # 6. Unlock continuous shooting for watercolor and richtone-mono by removing them from ITEM_ID_SA_USE_EFFECT
+    pat_sa_wc = r'sget-object\s+v0,\s*Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->ITEM_ID_SA_USE_EFFECT:Ljava/util/ArrayList;\s*(?:\.line\s+\d+\s*)?const-string\s+v1,\s*"watercolor"\s*invoke-virtual\s+\{v0,\s*v1\},\s*Ljava/util/ArrayList;->add\(Ljava/lang/Object;\)Z'
+    pat_sa_rt = r'sget-object\s+v0,\s*Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->ITEM_ID_SA_USE_EFFECT:Ljava/util/ArrayList;\s*(?:\.line\s+\d+\s*)?const-string\s+v1,\s*"richtone-mono"\s*invoke-virtual\s+\{v0,\s*v1\},\s*Ljava/util/ArrayList;->add\(Ljava/lang/Object;\)Z'
+    content, c1 = re.subn(pat_sa_wc, '# Unlocked burst for watercolor', content, count=1)
+    content, c2 = re.subn(pat_sa_rt, '# Unlocked burst for richtone-mono', content, count=1)
+    if c1 > 0 and c2 > 0:
+        print("Successfully unlocked continuous shooting (removed watercolor & richtone-mono from ITEM_ID_SA_USE_EFFECT)")
+    else:
+        print(f"Notice: ITEM_ID_SA_USE_EFFECT removal results (c1={c1}, c2={c2})")
+
     with open(controller_path, 'w', encoding='utf-8') as f:
         f.write(content)
     print("Successfully patched PictureEffectPlusController.smali")
@@ -591,6 +601,41 @@ def patch_key_converter_smali(key_converter_path):
     with open(key_converter_path, 'w', encoding='utf-8') as f:
         f.write(content)
 
+def patch_drive_mode_controller_smali(dmc_path):
+    print(f"Patching {dmc_path}...")
+    with open(dmc_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # Hook isAvailable(Ljava/lang/String;)Z to allow burst and all drive modes for Ricoh presets
+    target = """invoke-virtual {v2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getBackupEffectValue()Ljava/lang/String;
+
+    move-result-object v0"""
+
+    repl = """invoke-virtual {v2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getBackupEffectValue()Ljava/lang/String;
+
+    move-result-object v0
+
+    invoke-static {v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->isRicohPreset(Ljava/lang/String;)Z
+
+    move-result v2
+
+    if-eqz v2, :cond_ricoh_not_preset
+
+    return v1
+
+    :cond_ricoh_not_preset"""
+
+    if target in content and "isRicohPreset" not in content:
+        content = content.replace(target, repl, 1)
+        print("Successfully unlocked continuous shooting & drive modes in PictureEffectPlusDriveModeController.smali")
+    elif "isRicohPreset" in content:
+        print("PictureEffectPlusDriveModeController.smali already hooked.")
+    else:
+        print("Warning: target getBackupEffectValue not found in PictureEffectPlusDriveModeController.smali")
+
+    with open(dmc_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
 def patch_resources_arsc(arsc_path):
     print(f"Patching {arsc_path}...")
     with open(arsc_path, 'rb') as f:
@@ -850,6 +895,12 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         else:
             print("Warning: PictureQualityController.smali not found, skipping quality patch.")
 
+        dmc_smali = os.path.join(target_hook_dir, 'PictureEffectPlusDriveModeController.smali')
+        if os.path.exists(dmc_smali):
+            patch_drive_mode_controller_smali(dmc_smali)
+        else:
+            print("Warning: PictureEffectPlusDriveModeController.smali not found, skipping drive mode patch.")
+
         # Step 4: Update MenuData.xml
         print("==> [4/7] Updating filter names in MenuData.xml ...")
         menu_xml = os.path.join(work_dir, 'assets', 'MenuData.xml')
@@ -883,7 +934,7 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         print("  2. 理光负片    (Ricoh Negative Film)")
         print("  3. 高对比黑白  (Ricoh High Contrast B&W)")
         print("  4. 森山大道风  (Moriyama Daido Style)")
-        print("  5. 麦凯瑞 Kodachrome (Steve McCurry Kodachrome)")
+        print("  5. 徕卡麦凯瑞 (Leica Steve McCurry)")
         print("\nInstall to camera using: ./scripts/install.sh <CAMERA_IP>")
         print("=" * 60 + "\n")
 

@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.8.0--B2.6-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.9.0--B2.7-orange?style=flat-square" alt="Version">
 </p>
 
 Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into a native-level **"Ricoh Camera"** through low-level hardware ISP hook and reverse engineering. By directly programming the **pre-ISP hardware White Balance shifts (LB/CC), 1024-point non-linear Gamma tone curves (with baked EV compensation), and row-sum normalized 3×3 RGB color matrices** into camera hardware registers, it faithfully reproduces the signature Ricoh GR split toning and filmic weight—delivering **zero shutter lag, artifact-free real-time EVF/LCD preview, and native high-speed continuous burst shooting**.
@@ -18,6 +18,14 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
 ---
 
 ## 🌟 Key Features & Highlights
+
+- 🛡️ **BIONZ X ISP Hardware State Sanitization & Zero B&W Lock**:
+  - Permanently resolves the BIONZ X ISP monochrome lock hazard: actively clears Partial Color extraction registers via `setColorSelectMode("off", sEmptyIntArray)` and explicitly restores the hardware 3×3 Identity Matrix (`sIdentityMatrix`) upon filter switching and application exit.
+  - Automatically forces `sIsRicohActive = true` on `onTerminateHook` to guarantee absolute hardware state cleanup, validated by an automated **4-Tier verification testbench with 20/20 checks PASS (100%)**.
+
+- 🎨 **Streamlined UI & Custom High-Fidelity Visual Assets**:
+  - Replaces Sony's legacy icons with custom pixel-perfect dial icons (70×60) matching original 4-bit quantised typography and live 280×480 preview images baked through authentic 10-bit Gamma curves and RGB matrices.
+  - Cleaned camera option hierarchy: strictly retains the 5 signature presets in `ApplicationTop`, eliminating redundant/unsupported legacy presets.
 
 - ⚡ **Drive Mode & Continuous Burst Unlocked**:
   - Bypasses Sony's artificial restrictions in Picture Effect+ that locked out drive modes (high-speed continuous burst, speed priority burst, bracket, and self-timers) on complex effects.
@@ -29,15 +37,14 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
 
 - 🛡️ **Universal PMCA Hardware Compatibility & Defensive HAL Architecture**:
   - Engineered with defensive runtime HAL probing and non-rethrowing exception handlers: flawlessly runs across **all PMCA camera generations**, including PMCA Gen 1 (Android 2.3.7 / API 10: NEX-5R/6, A7, A7R, A6000) and PMCA Gen 2 (Android 4.1.2 / API 16: A6300, A6500, A7M2, A7R2, RX100 M3/M4/M5). Older bodies gracefully degrade without `NoSuchMethodError` crashes.
-  - Validated by an automated **4-Tier verification testbench** (Dalvik API 10 bytecode, framework symbols, input ergonomics, and V1 signature/4-byte zipalign packaging) with 100% test pass rate (19/19 checks).
 - ⚡ **Pure Hardware ISP Real-time Pipeline**:
   Directly interfaces with Sony's proprietary library `com.sony.scalar.hardware.CameraEx` to write directly to hardware registers. Still capture executes via `SingleProcess` $\rightarrow$ `CameraEx.burstableTakePicture()`, completely bypassing slow software CPU RAW processing. Autofocus, shutter trigger, burst shooting, and live view operate with zero added latency.
 - 🌐 **Runtime Adaptive Multi-Language Engine (Zero-Config)**:
   - Dynamically perceives camera system locale via `Locale.getDefault()` without requiring separate APKs.
   - Seamlessly and automatically renders native translations across app launcher icons, live view OSD badges, option menus, dial scrolling indicators, and help guides:
-    - **English & International**: `Ricoh Camera`, `Ricoh GR Positive Film`, `Ricoh Negative Film`, `High Contrast B&W`, `Moriyama Daido B&W`, `Leica McCurry`.
-    - **繁體中文 (台灣 / 香港)**: `理光相機`, `理光 GR 正片`, `理光 負片`, `高對比黑白`, `森山大道風`, `徠卡麥凱瑞`.
-    - **简体中文 (大陆)**: `理光相机`, `理光 GR 正片`, `理光 负片`, `高对比黑白`, `森山大道风`, `徕卡麦凯瑞`.
+    - **English & International**: `Ricoh Camera`, `Ricoh GR Positive Film`, `Ricoh Negative Film`, `High Contrast B&W`, `Moriyama Daido B&W`, `Steve McCurry`.
+    - **繁體中文 (台灣 / 香港)**: `理光相機`, `理光 GR 正片`, `理光 負片`, `高對比黑白`, `森山大道風`, `麥凱瑞 Kodachrome`.
+    - **简体中文 (大陆)**: `理光相机`, `理光 GR 正片`, `理光 负片`, `高对比黑白`, `森山大道风`, `麦凯瑞 Kodachrome`.
 - 🌈 **Authentic Ricoh Split Toning & Color Reproduction**:
   - **Pre-ISP Hardware WB Shifts**: Injects precise LB (Light Balance / amber-blue) and CC (Color Compensation / green-magenta) offsets, providing a warm slide base or gentle vintage negative undertone. Automatically restores user original WB upon exiting the app.
   - **1024-Point Gamma Curve with Baked EV**: Baked -0.33 EV under-exposure in Positive Film and Moriyama B&W suppresses harsh blown-out highlights; baked +0.33 EV boost with lifted black floor in Negative Film replicates wide dynamic latitude analog print look.
@@ -47,7 +54,7 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
   - **Ricoh Negative Film**: Matte film tone curve with lifted black level (~36), low contrast, subtle warm cast, and graceful highlight roll-off.
   - **High Contrast B&W**: Accurate BT.601 luminance grayscale conversion combined with an aggressive S-curve, yielding an inky, high-density street look.
   - **Moriyama Daido Style**: Heavy red-filter weighted monochrome channel mix, darkening blue skies, producing dramatic grain structure and raw monochrome street tension.
-  - **Leica Steve McCurry**: Authentic Leica Steve McCurry documentary film profile decomposed directly from `Leica_SteveMcCurry.cube`. Features classic Leica warm golden rendering ("德味暖金"), deep pure slide film blacks ($D_{\min} = 0$), rich shadow density, calibrated 3×3 RGB color matrix `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`, and natural human skin tones.
+  - **Steve McCurry Kodachrome**: Authentic Magnum master Steve McCurry Kodachrome documentary film profile. Features pure slide film blacks ($D_{\min} = 0$), baked-in -0.33 EV underexposure midtone shadow densification, steep slide contrast (slope 1.35), asymmetric Kodachrome color matrix, and warm golden-hour light balance (LB=+2), delivering the iconic National Geographic saturated warmth and dramatic storytelling tones.
 - 🔄 **Hardware Color State Protection**: Automatically resets identity matrices, WB shift registers, and default Gamma curves upon filter switching or application exit, preventing any persistent color cast on camera restarts.
 
 ---

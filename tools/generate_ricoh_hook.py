@@ -103,6 +103,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 .field public static final sMoriyamaMatrix:[I
 .field public static final sCrossProcessMatrix:[I
 .field public static final sIdentityMatrix:[I
+.field public static final sEmptyIntArray:[I
 
 
 # direct methods
@@ -114,6 +115,9 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
     sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
+
+    new-array v1, v0, [I
+    sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sEmptyIntArray:[I
 
     const/4 v0, 0x0
     sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sGammaPos:[B
@@ -605,13 +609,27 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     return v0
 
     :cond_3
-    # 1. Turn off native effect to avoid hardware conflict
+    # 1. Turn off native effect and Partial Color extraction mode to avoid hardware B&W lock
     iget-object v2, p1, Landroid/util/Pair;->second:Ljava/lang/Object;
     check-cast v2, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;
     if-eqz v2, :cond_4
     const-string v4, "off"
     invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setPictureEffect(Ljava/lang/String;)V
 
+    :try_start_csm_apply
+    const-string v4, "off"
+    sput-object v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->mMode:Ljava/lang/String;
+    sget-object v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sEmptyIntArray:[I
+    sput-object v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->mEnabledCh:[I
+    invoke-virtual {{v2, v4, v5}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorSelectMode(Ljava/lang/String;[I)V
+    :try_end_csm_apply
+    .catch Ljava/lang/Throwable; {{:try_start_csm_apply .. :try_end_csm_apply}} :catch_csm_apply
+    goto :goto_csm_apply_done
+
+    :catch_csm_apply
+    move-exception v4
+
+    :goto_csm_apply_done
     const/4 v4, 0x0
     invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
     invoke-virtual {{v2, v4}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
@@ -821,9 +839,24 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     check-cast v1, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;
     if-eqz v1, :cond_3
 
+    :try_start_res_pe
+    const-string v2, "off"
+    invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setPictureEffect(Ljava/lang/String;)V
+    sput-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->mMode:Ljava/lang/String;
+    sget-object v3, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sEmptyIntArray:[I
+    sput-object v3, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->mEnabledCh:[I
+    invoke-virtual {{v1, v2, v3}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorSelectMode(Ljava/lang/String;[I)V
+    :try_end_res_pe
+    .catch Ljava/lang/Throwable; {{:try_start_res_pe .. :try_end_res_pe}} :catch_res_pe
+    goto :goto_res_pe_done
+
+    :catch_res_pe
+    move-exception v2
+
+    :goto_res_pe_done
     :try_start_res_mat
-    # Pass null to bypass RGB matrix multiplication hardware
-    const/4 v2, 0x0
+    # Restore 3x3 identity matrix [1024,0,0, 0,1024,0, 0,0,1024] to BIONZ X ISP
+    sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIdentityMatrix:[I
     invoke-virtual {{v1, v2}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setRGBMatrix([I)V
     :try_end_res_mat
     .catch Ljava/lang/Throwable; {{:try_start_res_mat .. :try_end_res_mat}} :catch_res_mat
@@ -894,6 +927,8 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 .method public static onTerminateHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)V
     .locals 1
 
+    const/4 v0, 0x1
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
     const/4 v0, 0x0
     invoke-static {{p0, v0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->resetHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;)V
     return-void
@@ -1070,15 +1105,15 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     move-result v0
     if-eqz v0, :cond_check_rawjpeg
     if-nez v1, :cond_xpro_zh
-    const-string v0, "Leica McCurry"
+    const-string v0, "Steve McCurry"
     return-object v0
     :cond_xpro_zh
     const/4 v0, 0x1
     if-ne v1, v0, :cond_xpro_cn
-    const-string v0, "\u5f95\u5361\u9ea5\u51f1\u745e"
+    const-string v0, "\u9ea5\u51f1\u745e Kodachrome"
     return-object v0
     :cond_xpro_cn
-    const-string v0, "\u5f95\u5361\u9ea6\u51ef\u745e"
+    const-string v0, "\u9ea6\u51ef\u745e Kodachrome"
     return-object v0
 
     :cond_check_rawjpeg

@@ -47,6 +47,7 @@
       "methods": [
         "getColorCompensationForWhiteBalance()I",
         "getColorMode()Ljava/lang/String;",
+        "getColorSelectMode()Ljava/lang/String;",
         "getColorTemperatureForWhiteBalance()I",
         "getContrast()I",
         "getDROMode()Ljava/lang/String;",
@@ -62,6 +63,7 @@
         "getSharpness()I",
         "setColorCompensationForWhiteBalance(I)V",
         "setColorMode(Ljava/lang/String;)V",
+        "setColorSelectMode(Ljava/lang/String;[I)V",
         "setColorTemperatureForWhiteBalance(I)V",
         "setContrast(I)V",
         "setDROMode(Ljava/lang/String;)V",

@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.8.0--B2.6-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.9.0--B2.7-orange?style=flat-square" alt="Version">
 </p>
 
 透過底層硬體 ISP Hook 逆向工程技術，將索尼官方「相片效果+ (Picture Effect+)」應用深度改造為原生級**「理光相機」**。直接將理光 GR 經典底片色彩的 **前置硬體白平衡偏移 (WB Shift)、1024 階非線性 Gamma 曲線 (內嵌 EV 補償) 與 3×3 RGB 顏色矩陣** 協同寫入相機底層硬體暫存器，重現理光 GR 經典的高低光分色 (Split Toning) 與底片色彩厚實感，實現**零快門延遲、EVF/LCD 即時取景無殘影、原生高速連拍**的直出底片體驗。
@@ -18,6 +18,14 @@
 ---
 
 ## 🌟 核心特性與亮點
+
+- 🛡️ **BIONZ X ISP 硬體暫存器徹底清洗與杜絕黑白鎖定**:
+  - 徹底終結索尼相機在退出或切換黑白濾鏡時偶發殘留黑白/部分色彩的頑疾：在濾鏡切換與應用程式退出時主動清除 `setColorSelectMode("off", sEmptyIntArray)` 部分色彩暫存器，並顯式向 ISP 注入純正 3×3 單位矩陣 (`sIdentityMatrix`)；
+  - 在 `onTerminateHook` 中強制啟動硬體色彩復位，配套**四階自動化測試工作台 20/20 項全通 (100% PASS)**。
+
+- 🎨 **精簡原生選單層級與客製化高精度圖示資產**:
+  - 重新繪製 70×60 錶盤選單圖示（字形與索尼 4-bit 量化排版嚴格對齊）以及 280×480 即時底片效果預覽圖（經真實 10-bit Gamma 曲線與 RGB 矩陣硬體渲染烘焙）；
+  - 精簡選單層級：主選單 `ApplicationTop` 純淨收錄 5 款核心底片預設，剔除冗餘官方效果，操作極為迅捷俐落。
 
 - ⚡ **突破限制：全面解鎖驅動模式與高速連拍**:
   - 徹底打破官方相片效果應用程式對複雜效果鎖定連拍、速度優先連拍、定時自拍與包圍曝光的限制；
@@ -29,15 +37,14 @@
 
 - 🛡️ **PMCA 全机型硬體防禦性架構與平滑降級**:
   - 深度適配所有 PMCA 世代相機：全面支援 PMCA 一代（Android 2.3.7 / API 10：A7、A7R、A6000、NEX-5R/6）與 PMCA 二代（Android 4.1.2 / API 16：A6300、A6500、A7M2、A7R2、RX100 系列），在不支援 10-bit 伽瑪表或色彩矩陣的老機型上平滑降級，絕不報 `NoSuchMethodError` 當機；
-  - 配套完善的**四階全方位自動化測試工作台**（Dalvik 位元組碼、PMCA 架構符號稽核、按鍵互動模擬、純 V1 簽名與 4 位元組記憶體對齊驗證），實現 19/19 項 100% 全通；
 - ⚡ **純硬體 ISP 即時管線 (零快门延遲 / 支援高速連拍)**：
   直接呼叫索尼相機底層私有庫 `com.sony.scalar.hardware.CameraEx` 寫入硬體暫存器。拍照走 `SingleProcess` $\rightarrow$ `CameraEx.burstableTakePicture()`，不調用慢速 CPU RAW 顯影，對焦、快門、連拍、取景全部為原生零延遲體驗。
 - 🌐 **執行階段自適應多語言引擎 (Locale 自動感知)**：
-  - 基於 Android 底層 `Locale.getDefault()` 即時感知機身語言，無需安裝不同版本 APK。
+  - 基於 Android 底层 `Locale.getDefault()` 即時感知機身語言，無需安裝不同版本 APK。
   - 應用程式桌面圖示、取景介面 OSD、設定選單、撥輪切換浮動提示與說明指南全自動無感切換：
-    - **英文/海外國際系統**：`Ricoh Camera`、`Ricoh GR Positive Film`、`Ricoh Negative Film`、`High Contrast B&W`、`Moriyama Daido B&W`、`Leica McCurry`
-    - **繁體中文系統 (台灣/香港)**：`理光相機`、`理光 GR 正片`、`理光 負片`、`高對比黑白`、`森山大道風`、`徠卡麥凱瑞`
-    - **簡體中文系統 (大陸)**：`理光相机`、`理光 GR 正片`、`理光 负片`、`高对比黑白`、`森山大道风`、`徕卡麦凯瑞`
+    - **英文/海外國際系統**：`Ricoh Camera`、`Ricoh GR Positive Film`、`Ricoh Negative Film`、`High Contrast B&W`、`Moriyama Daido B&W`、`Steve McCurry`
+    - **繁體中文系統 (台灣/香港)**：`理光相機`、`理光 GR 正片`、`理光 負片`、`高對比黑白`、`森山大道風`、`麥凱瑞 Kodachrome`
+    - **簡體中文系統 (大陸)**：`理光相机`、`理光 GR 正片`、`理光 负片`、`高对比黑白`、`森山大道风`、`麦凯瑞 Kodachrome`
 - 🌈 **真·理光高低光分色 (Split Toning) 與色彩重塑**：
   - **前置硬體 WB 偏移**：精準注入 LB (色溫/琥珀偏置) 與 CC (色彩補償)，賦予正片暖陽基底與負片泛黃溫潤底片底色，退出應用自動完美復位使用者原始 WB。
   - **1024 階 Gamma 內嵌 EV 烘焙**：正片與森山大道風內嵌 -0.33 EV 曝光壓暗烘焙壓制高光死白，負片內嵌 +0.33 EV 提亮配合暗部抬升模擬大寬容度負片質感。
@@ -47,7 +54,7 @@
   - **理光負片 (Ricoh Negative Film)**：底片啞光曲線，黑位抬升至 36，柔和低對比微泛暖調，高光優雅滾降。
   - **高對比黑白 (High Contrast B&W)**：精準 BT.601 亮度灰階轉換，大 S 反差曲線，呈現如油墨般深邃質感。
   - **森山大道風 (Moriyama Daido Style)**：強紅鏡黑白通道加權，壓暗天空，強化粗糲顆粒感與極致黑白張力。
-  - **徠卡麥凱瑞 (Leica Steve McCurry)**：直接逆向分解自真實的 `Leica_SteveMcCurry.cube`。呈現原汁原味的徠卡德味暖金影調與馬格南大師 Steve McCurry 經典紀實色彩，具備正片純黑底色 ($D_{\min}=0$)、厚重暗部密度、精調 3×3 柯達彩度矩陣 `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]` 與極其自然的人文膚色表現。
+  - **麥凱瑞 Kodachrome (Steve McCurry Kodachrome)**：致敬馬格南大師 Steve McCurry 經典 Kodachrome 傳奇正片色彩。徹底取代原版正負逆沖，具備正片純黑底色 ($D_{\min}=0$)、內嵌 -0.33 EV 曝光壓暗與 1.35 陡峭反差強化暗部與中階密度、非對稱柯達彩度矩陣與 LB=+2 黃金時刻暖琥珀色溫偏移，再現國家地理標誌性的濃郁暖調與極具戲劇張力的人文紀實底片感。
 - 🔄 **硬體色彩復位保障**：切換濾鏡或退出應用程式時，自動復位單位矩陣、白平衡偏移及預設 Gamma 表，徹底防止相機機身色彩殘留或色偏。
 
 ---

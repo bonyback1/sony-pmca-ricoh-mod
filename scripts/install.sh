@@ -62,6 +62,13 @@ fi
 
 PORT="5555"
 TARGET="${CAMERA_IP}:${PORT}"
+RELAY_PID=""
+cleanup_relay() {
+    if [ -n "${RELAY_PID}" ]; then
+        kill "${RELAY_PID}" 2>/dev/null || true
+    fi
+}
+trap cleanup_relay EXIT
 
 echo "=================================================================="
 echo "📸 正在连接索尼相机 ADB: ${TARGET} ..."
@@ -71,8 +78,44 @@ echo "=================================================================="
 adb disconnect "${TARGET}" 2>/dev/null || true
 
 # Connect
-CONNECT_OUT=$(adb connect "${TARGET}")
+CONNECT_OUT=$(adb connect "${TARGET}" 2>&1 || true)
 echo "${CONNECT_OUT}"
+
+if ! echo "${CONNECT_OUT}" | grep -qE "connected to|already connected"; then
+    echo "⚡ 检测到 macOS 本地网络权限拦截 adb 直连，正在启用 Python 本地端口转发 (127.0.0.1:15555 -> ${TARGET}) ..."
+    python3 -c '
+import socket, threading, sys
+target_ip, target_port = sys.argv[1], int(sys.argv[2])
+def pipe(src, dst):
+    try:
+        while True:
+            data = src.recv(65536)
+            if not data: break
+            dst.sendall(data)
+    except: pass
+    finally:
+        try: src.close()
+        except: pass
+        try: dst.close()
+        except: pass
+srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+srv.bind(("127.0.0.1", 15555))
+srv.listen(5)
+while True:
+    client, _ = srv.accept()
+    remote = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    remote.connect((target_ip, target_port))
+    threading.Thread(target=pipe, args=(client, remote), daemon=True).start()
+    threading.Thread(target=pipe, args=(remote, client), daemon=True).start()
+' "${CAMERA_IP}" "${PORT}" &
+    RELAY_PID=$!
+    sleep 0.5
+    TARGET="127.0.0.1:15555"
+    adb disconnect "${TARGET}" 2>/dev/null || true
+    CONNECT_OUT=$(adb connect "${TARGET}" 2>&1 || true)
+    echo "${CONNECT_OUT}"
+fi
 
 if ! echo "${CONNECT_OUT}" | grep -qE "connected to|already connected"; then
     echo ""

@@ -11,6 +11,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-10-17 (B2.7)
+
+### Added & Enhanced (BIONZ X ISP Hardware State Sanitization & Custom UI Assets)
+- **BIONZ X ISP Hardware State Sanitization & Zero B&W Lock**:
+  - Permanently resolved the persistent monochrome lock hazard in Sony's BIONZ X ISP when switching filters or exiting the app.
+  - Explicitly restored the 3×3 Identity Matrix (`sIdentityMatrix`: `[1024, 0, 0, 0, 1024, 0, 0, 0, 1024]`) instead of null on `resetHook`.
+  - Cleared Partial Color extraction registers via `setColorSelectMode("off", sEmptyIntArray)` in both `applyHook` and `resetHook`.
+  - Guaranteed full hardware teardown on application exit by forcing `sIsRicohActive = true` in `onTerminateHook`.
+  - Added Tier 2 Check 5 (`check_isp_bw_lock_prevention`) to the automated PMCA testbench, expanding verification to **20/20 checks PASS (100%)**.
+- **Redesigned Native UI & Custom Icon Assets (`src/icons/`, `tools/gen_ui_assets.py`)**:
+  - Replaced legacy Sony Picture Effect icons with custom pixel-perfect dial icons (70×60) with lettering calibrated against Sony's 4-bit quantised typography.
+  - Added 280×480 live preview sample images rendered directly through actual 1024-step Gamma curves and RGB matrices.
+  - Streamlined `MenuData.xml`: retained strictly the 5 signature presets in `ApplicationTop`, eliminating redundant/unsupported legacy presets.
+  - Patched `PictureEffectPlusPageMenuLayout.smali` to route `ApplicationSettings` cleanly to `ApplicationTop` for Ricoh presets.
+- **Playback Resume & TimerTask Stability**:
+  - Patched `PictureEffectPlusExecutorCreator.smali` (`forceEffectSetting()`) to immediately restore active Ricoh LUT & matrix upon returning from camera Playback mode.
+  - Patched `PictureEffectPlusForceSettingState.smali` to bypass native Sony PictureEffect timer task loops for Ricoh presets.
+- **Resilient ADB Wi-Fi Installation Relay (`scripts/install.sh`)**:
+  - Added automated fallback to local TCP port forwarding relay (`127.0.0.1:15555 -> ${CAMERA_IP}:5555`) to circumvent macOS Local Network privacy permission blocks on direct ADB connections.
+
 ## [1.8.0] - 2026-10-02 (B2.6)
 
 ### Added & Enhanced (Drive Mode Burst Unlock & Authentic Leica Steve McCurry Profile)

@@ -9,7 +9,7 @@ FILTERS = {
     'retro-photo': ('理光负片', '理光负片'),
     'richtone-mono': ('高对比黑白', '高对比黑白'),
     'rough-mono': ('森山大道风', '森山大道风'),
-    'watercolor': ('徕卡麦凯瑞', '徕卡麦凯瑞')
+    'watercolor': ('麦凯瑞 Kodachrome', '麦凯瑞 Kodachrome')
 }
 
 RICOH_ORDER = ['pop-color', 'retro-photo', 'richtone-mono', 'rough-mono', 'watercolor']
@@ -74,9 +74,9 @@ def update_menu_data(menu_file):
                 other_blocks.append(b_text)
 
         if len(block_map) == len(RICOH_ORDER):
-            new_body = "\n" + "\n".join([block_map[k] for k in RICOH_ORDER]) + "\n" + "\n".join(other_blocks) + "\n"
+            new_body = "\n" + "\n".join([block_map[k] for k in RICOH_ORDER]) + "\n"
             content = content[:app_top_match.start(2)] + new_body + content[app_top_match.end(2):]
-            print(f'Successfully reordered ApplicationTop: Ricoh presets placed at positions 1-5!')
+            print(f'Successfully updated ApplicationTop: only 5 Ricoh presets retained!')
         else:
             print(f'Warning: Only found {len(block_map)} Ricoh presets in ApplicationTop, skipping reordering.')
 

@@ -11,6 +11,26 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并严格遵循 [语义化版本规范 (SemVer)](https://semver.org/lang/zh-CN/)。
 
+## [1.9.0] - 2026-10-17 (B2.7)
+
+### 新增与增强 (BIONZ X ISP 硬件状态清洗/杜绝黑白锁定与原生定制 UI 图标)
+- **BIONZ X ISP 硬件状态彻底清洗 & 杜绝黑白滤镜锁定**:
+  - 彻底攻克索尼 BIONZ X ISP 在切换滤镜或退出应用时残留分色滤镜寄存器导致其他功能误锁定黑白的硬件顽疾；
+  - `resetHook` 与 `applyHook` 中显式清空分色抽取寄存器 (`setColorSelectMode("off", sEmptyIntArray)`)；
+  - `resetHook` 改为显式恢复标准 3×3 单位矩阵 (`sIdentityMatrix`: `[1024, 0, 0, 0, 1024, 0, 0, 0, 1024]`)，杜绝 null 传递可能引发的硬件状态漂移；
+  - 在 `onTerminateHook` 中强制置位 `sIsRicohActive = true`，确保退出 App 时硬件状态 100% 彻底复位与注销；
+  - 自动化 PMCA 测试套件新增 Tier 2 Check 5 (`check_isp_bw_lock_prevention`)，测试用例扩充至 **20/20 项全绿通过 (100%)**。
+- **重构原生 UI 资产与定制拨轮图标 (`src/icons/`, `tools/gen_ui_assets.py`)**:
+  - 彻底替换原生照片效果过时图标，制作并注入符合索尼 4-bit 量化排版规范的定制高精拨轮图标 (70×60)；
+  - 注入 280×480 原生实时取景预览样张，样张经真实 1024 阶 Gamma 曲线与 RGB 硬件矩阵精确渲染；
+  - 精简优化 `MenuData.xml`：顶层 `ApplicationTop` 纯净收敛至 5 款经典签名预设，剔除所有冗余无用选项；
+  - 修补 `PictureEffectPlusPageMenuLayout.smali`，理光预设点击 `ApplicationSettings` 干净重定向回 `ApplicationTop`。
+- **回放返回与定时器任务稳定性增强**:
+  - 修补 `PictureEffectPlusExecutorCreator.smali` (`forceEffectSetting()`)，从相册回放返回拍摄时瞬时恢复当前激活的理光 LUT 与颜色矩阵；
+  - 修补 `PictureEffectPlusForceSettingState.smali`，绕过官方照片效果针对理光预设的定时器循环检查任务，避免不必要的轮询与闪烁。
+- **弹性 ADB Wi-Fi 安装中继 (`scripts/install.sh`)**:
+  - 内置基于 Python 的本地 TCP 端口转发中继 (`127.0.0.1:15555 -> ${CAMERA_IP}:5555`)，完美绕过 macOS 本地网络隐私权限对直连 ADB 的阻断拦截。
+
 ## [1.8.0] - 2026-10-02 (B2.6)
 
 ### 新增与增强 (驱动模式高速连拍全面解锁 & 官方真·徕卡麦凯瑞纪实色彩)

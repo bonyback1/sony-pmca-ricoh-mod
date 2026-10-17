@@ -32,6 +32,11 @@ def patch_controller_smali(controller_path):
         content = f.read()
 
     # 1. Reset hook injection in setMode
+    # 0. Expose mMode and mEnabledCh as public static so RicohHook can clear Partial Color state
+    content = content.replace('.field private static mMode:Ljava/lang/String;', '.field public static mMode:Ljava/lang/String;')
+    content = content.replace('.field private static mEnabledCh:[I', '.field public static mEnabledCh:[I')
+
+    # 1. Inject RicohHook.resetHook(this, params) into resetPictureEffectSetting(Pair)
     if "RicohHook;->resetHook" not in content:
         # Match enter log before mMode = "off"
         pat1 = r'(invoke-static\s+\{[^}]+\},\s*Lcom/sony/imaging/app/pictureeffectplus/AppLog;->enter\(Ljava/lang/String;Ljava/lang/String;\)V\s*(?:\.line\s+\d+\s*)?sget-object\s+v\d+,\s*Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->mMode:Ljava/lang/String;\s*const-string\s+v\d+,\s*"off")'
@@ -636,6 +641,115 @@ def patch_drive_mode_controller_smali(dmc_path):
     with open(dmc_path, 'w', encoding='utf-8') as f:
         f.write(content)
 
+def patch_force_setting_state_smali(fss_path):
+    print(f"Patching {fss_path}...")
+    with open(fss_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    if "cond_ricoh_fss_skip" in content:
+        print("PictureEffectPlusForceSettingState.smali already hooked.")
+        return
+
+    pat = r'(invoke-virtual\s+\{v\d+\},\s*Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getBackupEffectValue\(\)Ljava/lang/String;\s*(?:\.line\s+\d+\s*)?move-result-object\s+(v\d+))'
+    def repl_fss(m):
+        full_match = m.group(1)
+        res_reg = m.group(2)
+        return (
+            f"{full_match}\n\n"
+            f"    invoke-static {{{res_reg}}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->isRicohPreset(Ljava/lang/String;)Z\n\n"
+            f"    move-result v2\n\n"
+            f"    if-eqz v2, :cond_ricoh_fss_skip\n\n"
+            f"    iget-object v2, p1, Landroid/util/Pair;->second:Ljava/lang/Object;\n\n"
+            f"    check-cast v2, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;\n\n"
+            f"    const-string v3, \"off\"\n\n"
+            f"    invoke-virtual {{v2, v3}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setPictureEffect(Ljava/lang/String;)V\n\n"
+            f"    goto :goto_0\n\n"
+            f"    :cond_ricoh_fss_skip"
+        )
+
+    new_content, count = re.subn(pat, repl_fss, content, count=1)
+    if count > 0:
+        content = new_content
+        print("Successfully patched PictureEffectPlusForceSettingState.smali: prevent native Sony PictureEffect and ForceSettingTimerTask loop")
+    else:
+        print("Warning: target getBackupEffectValue not found in PictureEffectPlusForceSettingState.smali")
+
+    with open(fss_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_executor_creator_smali(ec_path):
+    print(f"Patching {ec_path}...")
+    with open(ec_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    target = """    invoke-virtual {v3}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->forceEffectOptionSetting()V"""
+    repl = """    invoke-virtual {v3}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->forceEffectSetting()V
+
+    invoke-virtual {v3}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->forceEffectOptionSetting()V"""
+
+    if target in content and "forceEffectSetting()\n\n    invoke-virtual {v3}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->forceEffectOptionSetting()" not in content:
+        content = content.replace(target, repl, 1)
+        print("Successfully patched PictureEffectPlusExecutorCreator.smali: restore Ricoh LUT & matrix when returning from Playback")
+    else:
+        print("PictureEffectPlusExecutorCreator.smali already hooked or target not found.")
+
+    with open(ec_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_page_menu_layout_smali(pml_path):
+    print(f"Patching {pml_path}...")
+    with open(pml_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    target = """    :cond_8
+    move-object p1, v0"""
+
+    repl = """    :cond_8
+    invoke-static {v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->isRicohPreset(Ljava/lang/String;)Z
+
+    move-result v3
+
+    if-eqz v3, :cond_ricoh_pml_orig
+
+    const-string p1, "ApplicationTop"
+
+    goto :goto_0
+
+    :cond_ricoh_pml_orig
+    move-object p1, v0"""
+
+    if target in content and "cond_ricoh_pml_orig" not in content:
+        content = content.replace(target, repl, 1)
+        print("Successfully patched PictureEffectPlusPageMenuLayout.smali: route ApplicationSettings to ApplicationTop for Ricoh presets")
+    elif "cond_ricoh_pml_orig" in content:
+        print("PictureEffectPlusPageMenuLayout.smali already hooked.")
+    else:
+        print("Warning: target :cond_8 not found in PictureEffectPlusPageMenuLayout.smali")
+
+    with open(pml_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_menu_icons(work_dir):
+    print("Patching menu icons from src/icons/...")
+    src_icons_dir = os.path.join(PROJECT_ROOT, 'src', 'icons')
+    if not os.path.exists(src_icons_dir):
+        print("Warning: src/icons directory not found, skipping icon patch.")
+        return
+
+    replaced_count = 0
+    for root, dirs, files in os.walk(work_dir):
+        base = os.path.basename(root)
+        # drawable-long-* hold 1x1 placeholders; the A6300 only uses notlong.
+        if 'drawable' in base and 'notlong' in base:
+            for icon_name in os.listdir(src_icons_dir):
+                if icon_name.endswith('.png') and icon_name in files:
+                    src_path = os.path.join(src_icons_dir, icon_name)
+                    dst_path = os.path.join(root, icon_name)
+                    shutil.copyfile(src_path, dst_path)
+                    replaced_count += 1
+                    print(f"  Replaced icon: {os.path.relpath(dst_path, work_dir)}")
+    print(f"Successfully patched {replaced_count} menu icons!")
+
 def patch_resources_arsc(arsc_path):
     print(f"Patching {arsc_path}...")
     with open(arsc_path, 'rb') as f:
@@ -861,11 +975,27 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         if os.path.exists(layout_smali):
             patch_option_menu_layout_smali(layout_smali)
 
+        pml_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'layout', 'PictureEffectPlusPageMenuLayout.smali')
+        if os.path.exists(pml_smali):
+            patch_page_menu_layout_smali(pml_smali)
+
         ee_state_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'PictureEffectEEState.smali')
         if os.path.exists(ee_state_smali):
             patch_ee_state_smali(ee_state_smali)
         else:
             print("Warning: PictureEffectEEState.smali not found, skipping EEState patch.")
+
+        fss_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'PictureEffectPlusForceSettingState.smali')
+        if os.path.exists(fss_smali):
+            patch_force_setting_state_smali(fss_smali)
+        else:
+            print("Warning: PictureEffectPlusForceSettingState.smali not found, skipping ForceSettingState patch.")
+
+        ec_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'PictureEffectPlusExecutorCreator.smali')
+        if os.path.exists(ec_smali):
+            patch_executor_creator_smali(ec_smali)
+        else:
+            print("Warning: PictureEffectPlusExecutorCreator.smali not found, skipping ExecutorCreator patch.")
 
         app_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'PictureEffectPlus.smali')
         if os.path.exists(app_smali):
@@ -909,6 +1039,9 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         else:
             print("Warning: assets/MenuData.xml not found, skipping menu update.")
 
+        # Step 4.5: Update menu icons
+        patch_menu_icons(work_dir)
+
         # Step 5: Patch resources.arsc string pool
         print("==> [5/7] Patching resources.arsc string pool for app display name ...")
         arsc_file = os.path.join(work_dir, 'resources.arsc')
@@ -934,7 +1067,7 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         print("  2. 理光负片    (Ricoh Negative Film)")
         print("  3. 高对比黑白  (Ricoh High Contrast B&W)")
         print("  4. 森山大道风  (Moriyama Daido Style)")
-        print("  5. 徕卡麦凯瑞 (Leica Steve McCurry)")
+        print("  5. 麦凯瑞 Kodachrome (Steve McCurry Kodachrome)")
         print("\nInstall to camera using: ./scripts/install.sh <CAMERA_IP>")
         print("=" * 60 + "\n")
 

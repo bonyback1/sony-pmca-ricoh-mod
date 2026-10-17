@@ -546,6 +546,63 @@ def check_dma_memory_safety(smali_dir: str, invocations: List[FrameworkInvocatio
     return CheckResult("DMA Memory Safety Audit", passed, dur, msg, violations)
 
 
+def check_isp_bw_lock_prevention(smali_dir: str) -> CheckResult:
+    """
+    Check 5: ISP B&W Lock & Hardware State Reset Audit.
+    Verifies that RicohHook.smali (if present in smali_dir):
+    - Restores sIdentityMatrix:[I (not null 0x0) in resetHook's setRGBMatrix([I)V call
+    - Clears Partial Color extraction mode via setColorSelectMode("off", sEmptyIntArray) in both applyHook and resetHook
+    - Forces sIsRicohActive=true in onTerminateHook to guarantee hardware cleanup on app exit
+    """
+    start_time = time.time()
+    violations = []
+    hook_file = None
+    for root, _, files in os.walk(smali_dir):
+        if "RicohHook.smali" in files:
+            hook_file = os.path.join(root, "RicohHook.smali")
+            break
+
+    if hook_file and os.path.exists(hook_file):
+        with open(hook_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # 1. Verify resetHook uses sIdentityMatrix, not const/4 v2, 0x0 before setRGBMatrix
+        reset_m = re.search(r'\.method public static resetHook\b[\s\S]*?\.end method', content)
+        if reset_m:
+            reset_body = reset_m.group(0)
+            if "sIdentityMatrix:[I" not in reset_body:
+                violations.append(
+                    f"{hook_file}: resetHook() does not pass sIdentityMatrix:[I to setRGBMatrix([I)V; passing null leaves monochrome RGB matrix locked in BIONZ X ISP!"
+                )
+            if "setColorSelectMode(Ljava/lang/String;[I)V" not in reset_body:
+                violations.append(
+                    f"{hook_file}: resetHook() does not clear Partial Color extraction via setColorSelectMode(\"off\", sEmptyIntArray)!"
+                )
+
+        # 2. Verify applyHook clears setColorSelectMode
+        apply_m = re.search(r'\.method public static applyHook\b[\s\S]*?\.end method', content)
+        if apply_m:
+            apply_body = apply_m.group(0)
+            if "setColorSelectMode(Ljava/lang/String;[I)V" not in apply_body:
+                violations.append(
+                    f"{hook_file}: applyHook() does not clear Partial Color extraction via setColorSelectMode(\"off\", sEmptyIntArray)!"
+                )
+
+        # 3. Verify onTerminateHook forces sIsRicohActive = 1
+        term_m = re.search(r'\.method public static onTerminateHook\b[\s\S]*?\.end method', content)
+        if term_m:
+            term_body = term_m.group(0)
+            if "sput-boolean" not in term_body or "sIsRicohActive:Z" not in term_body:
+                violations.append(
+                    f"{hook_file}: onTerminateHook() does not force sIsRicohActive=true before resetHook()!"
+                )
+
+    dur = time.time() - start_time
+    passed = len(violations) == 0
+    msg = "BIONZ X ISP RGBMatrix identity reset & ColorSelectMode cleanup verified" if passed else f"{len(violations)} ISP B&W lock hazards found"
+    return CheckResult("ISP B&W Lock & Hardware State Reset Audit", passed, dur, msg, violations)
+
+
 # ---------------------------------------------------------------------------
 # Tier 2 Master Runner API
 # ---------------------------------------------------------------------------
@@ -595,7 +652,8 @@ def run_tier2_tests(smali_dir: Optional[str] = None, gen1_path: Optional[str] = 
         check_universal_symbols(invocations, g1_cat, g2_cat),
         check_gen1_crash_hazards(invocations, g1_cat, g2_cat),
         check_fragile_hal_protection(invocations),
-        check_dma_memory_safety(target_dir, invocations)
+        check_dma_memory_safety(target_dir, invocations),
+        check_isp_bw_lock_prevention(target_dir),
     ]
 
     all_passed = all(c.passed for c in checks)

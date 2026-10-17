@@ -47,6 +47,7 @@ unsigned.apk
 
 
 # Local scratch scripts & independent experiments
+scratch/
 scripts/install_recipelab.sh
 scripts/install_focus_bracket.sh
 focus_bracket/

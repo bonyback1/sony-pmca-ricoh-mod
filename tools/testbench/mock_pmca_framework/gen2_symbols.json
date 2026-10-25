@@ -133,6 +133,7 @@
       "methods": [
         "getCamera()Lcom/sony/scalar/hardware/CameraEx;",
         "getEmptyParameters()Landroid/util/Pair;",
+        "getParameters()Landroid/util/Pair;",
         "getInstance()Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;",
         "init()V",
         "registerNDFilterListener()V",

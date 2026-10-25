@@ -27,6 +27,7 @@ from test_dalvik_verification import run_tier1_tests, TierResult as T1Result
 from test_pmca_symbols import run_tier2_tests, TierResult as T2Result
 from test_input_ergonomics import run_tier3_tests, TierResult as T3Result
 from test_apk_signing import run_tier4_tests, TierResult as T4Result
+from test_patched_apk import run_tier5_tests, TierResult as T5Result
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +135,13 @@ def execute_testbench(
             print(fmt.cyan("\n--- [Running Tier 4: APK Packaging & Signing Validator] ---"))
         t4_res = run_tier4_tests(apk_path=apk_path, verbose=verbose)
         results.append(t4_res)
+
+    # Tier 5: Patched APK Bytecode Integrity Auditor
+    if 5 in active_tiers:
+        if verbose:
+            print(fmt.cyan("\n--- [Running Tier 5: Patched APK Bytecode Integrity Auditor] ---"))
+        t5_res = run_tier5_tests(apk_path=apk_path, verbose=verbose)
+        results.append(t5_res)
 
     overall_duration = time.time() - overall_start
 
@@ -296,7 +304,7 @@ Examples:
     )
     parser.add_argument("--apk", "-a", type=str, default=None, help="Path to target APK file")
     parser.add_argument("--smali-dir", "-s", type=str, default=None, help="Path to target Smali directory")
-    parser.add_argument("--tier", "-t", type=str, default="all", help="Comma-separated tiers to run: 1,2,3,4 or all (default: all)")
+    parser.add_argument("--tier", "-t", type=str, default="all", help="Comma-separated tiers to run: 1,2,3,4,5 or all (default: all)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output showing individual checks and line violations")
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI color codes in console output")
     parser.add_argument("--json-report", type=str, default=None, help="Path to output JSON test report")
@@ -310,13 +318,13 @@ Examples:
     # Parse active tiers
     tier_str = args.tier.strip().lower()
     if tier_str in ("all", "*"):
-        active_tiers = [1, 2, 3, 4]
+        active_tiers = [1, 2, 3, 4, 5]
     else:
         try:
             active_tiers = [int(x.strip()) for x in tier_str.split(",") if x.strip()]
             for t in active_tiers:
-                if t not in (1, 2, 3, 4):
-                    print(f"Error: Invalid tier number '{t}'. Allowed tiers are 1, 2, 3, 4.", file=sys.stderr)
+                if t not in (1, 2, 3, 4, 5):
+                    print(f"Error: Invalid tier number '{t}'. Allowed tiers are 1, 2, 3, 4, 5.", file=sys.stderr)
                     sys.exit(2)
         except ValueError:
             print(f"Error: Invalid tier argument '{args.tier}'. Expected comma-separated numbers (e.g. '1,2,3').", file=sys.stderr)

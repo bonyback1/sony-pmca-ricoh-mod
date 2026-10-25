@@ -597,9 +597,26 @@ def check_isp_bw_lock_prevention(smali_dir: str) -> CheckResult:
                     f"{hook_file}: onTerminateHook() does not force sIsRicohActive=true before resetHook()!"
                 )
 
+        # 4. Verify filterQualityAvailability returns 1 unconditionally so switching out of pure RAW mode never disables JPEG qualities
+        fqa_m = re.search(r'\.method public static filterQualityAvailability\b[\s\S]*?\.end method', content)
+        if fqa_m:
+            fqa_body = fqa_m.group(0)
+            if "return p1" in fqa_body:
+                violations.append(
+                    f"{hook_file}: filterQualityAvailability() delegates to AvailableInfo (return p1), which locks out JPEG qualities when in pure RAW mode!"
+                )
+
+        # 5. Verify applyHook reads sOriginalLB / sOriginalCC from live CameraSetting.getParameters(), not empty p1 ParametersModifier
+        if apply_m:
+            apply_body = apply_m.group(0)
+            if "CameraSetting;->getParameters()Landroid/util/Pair;" not in apply_body:
+                violations.append(
+                    f"{hook_file}: applyHook() reads sOriginalLB/sOriginalCC from empty ParametersModifier instead of CameraSetting.getParameters()!"
+                )
+
     dur = time.time() - start_time
     passed = len(violations) == 0
-    msg = "BIONZ X ISP RGBMatrix identity reset & ColorSelectMode cleanup verified" if passed else f"{len(violations)} ISP B&W lock hazards found"
+    msg = "BIONZ X ISP RGBMatrix identity reset, ColorSelectMode cleanup, WB backup & RAW/Burst availability verified" if passed else f"{len(violations)} ISP/availability hazards found"
     return CheckResult("ISP B&W Lock & Hardware State Reset Audit", passed, dur, msg, violations)
 
 

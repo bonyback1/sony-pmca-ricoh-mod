@@ -10,6 +10,14 @@
 .field private static sOriginalCC:I
 .field private static sHasSavedOriginalWB:Z
 
+.field private static sOriginalColorMode:Ljava/lang/String;
+.field private static sOriginalContrast:I
+.field private static sOriginalSaturation:I
+.field private static sOriginalSharpness:I
+.field private static sOriginalDRO:Ljava/lang/String;
+.field private static sOriginalHDR:Ljava/lang/String;
+.field private static sHasSavedOriginalStyle:Z
+
 .field private static sGammaPos:[B
 .field private static sGammaNeg:[B
 .field private static sGammaHcbw:[B
@@ -34,6 +42,14 @@
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
     sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
+
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalColorMode:Ljava/lang/String;
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalContrast:I
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSaturation:I
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSharpness:I
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalDRO:Ljava/lang/String;
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalHDR:Ljava/lang/String;
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
 
     new-array v1, v0, [I
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sEmptyIntArray:[I
@@ -1184,6 +1200,49 @@
     move-exception v4
 
     :goto_csm_apply_done
+    # Backup original user Creative Style, DRO & HDR on first apply
+    sget-boolean v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
+    if-nez v4, :cond_style_saved
+
+    :try_start_style_get
+    invoke-virtual {v1}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->getParameters()Landroid/util/Pair;
+    move-result-object v4
+    if-eqz v4, :cond_style_saved
+    iget-object v4, v4, Landroid/util/Pair;->second:Ljava/lang/Object;
+    check-cast v4, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;
+    if-eqz v4, :cond_style_saved
+
+    invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getColorMode()Ljava/lang/String;
+    move-result-object v5
+    sput-object v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalColorMode:Ljava/lang/String;
+
+    invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getContrast()I
+    move-result v5
+    sput v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalContrast:I
+
+    invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getSaturation()I
+    move-result v5
+    sput v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSaturation:I
+
+    invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getSharpness()I
+    move-result v5
+    sput v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSharpness:I
+
+    invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getDROMode()Ljava/lang/String;
+    move-result-object v5
+    sput-object v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalDRO:Ljava/lang/String;
+
+    invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getHDRMode()Ljava/lang/String;
+    move-result-object v5
+    sput-object v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalHDR:Ljava/lang/String;
+
+    const/4 v4, 0x1
+    sput-boolean v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
+    :try_end_style_get
+    .catch Ljava/lang/Throwable; {:try_start_style_get .. :try_end_style_get} :catch_style_get
+
+    :cond_style_saved
+    :goto_style_saved_done
     const/4 v4, 0x0
     invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
     invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
@@ -1213,13 +1272,20 @@
     if-nez v4, :cond_wb_saved
 
     :try_start_wb_get
-    invoke-virtual {v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getLightBalanceForWhiteBalance()I
-    move-result v4
-    sput v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
+    invoke-virtual {v1}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->getParameters()Landroid/util/Pair;
+    move-result-object v4
+    if-eqz v4, :cond_wb_saved
+    iget-object v4, v4, Landroid/util/Pair;->second:Ljava/lang/Object;
+    check-cast v4, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;
+    if-eqz v4, :cond_wb_saved
 
-    invoke-virtual {v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getColorCompensationForWhiteBalance()I
-    move-result v4
-    sput v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
+    invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getLightBalanceForWhiteBalance()I
+    move-result v5
+    sput v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
+
+    invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getColorCompensationForWhiteBalance()I
+    move-result v5
+    sput v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
 
     const/4 v4, 0x1
     sput-boolean v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
@@ -1241,6 +1307,10 @@
     .catch Ljava/lang/Throwable; {:try_start_wb_set .. :try_end_wb_set} :catch_wb_set
 
     goto :goto_matrix
+
+    :catch_style_get
+    move-exception v4
+    goto :goto_style_saved_done
 
     :catch_wb_get
     move-exception v4
@@ -1416,6 +1486,41 @@
     .catch Ljava/lang/Throwable; {:try_start_res_mat .. :try_end_res_mat} :catch_res_mat
 
     :goto_res_mat_done
+    sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
+    if-eqz v2, :cond_style_fallback
+
+    :try_start_style_res
+    sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalColorMode:Ljava/lang/String;
+    if-eqz v2, :cond_res_cm_skip
+    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorMode(Ljava/lang/String;)V
+    :cond_res_cm_skip
+
+    sget v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalContrast:I
+    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
+
+    sget v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSaturation:I
+    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
+
+    sget v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSharpness:I
+    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
+
+    sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalDRO:Ljava/lang/String;
+    if-eqz v2, :cond_res_dro_skip
+    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setDROMode(Ljava/lang/String;)V
+    :cond_res_dro_skip
+
+    sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalHDR:Ljava/lang/String;
+    if-eqz v2, :cond_res_hdr_skip
+    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setHDRMode(Ljava/lang/String;)V
+    :cond_res_hdr_skip
+
+    const/4 v2, 0x0
+    sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
+    :try_end_style_res
+    .catch Ljava/lang/Throwable; {:try_start_style_res .. :try_end_style_res} :catch_style_res
+    goto :goto_style_res_done
+
+    :cond_style_fallback
     :try_start_res_mode
     const-string v2, "standard"
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorMode(Ljava/lang/String;)V
@@ -1427,6 +1532,8 @@
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
+
+    :goto_style_res_done
 
     # Restore original user WB shift
     sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
@@ -1468,6 +1575,10 @@
     :catch_res_mode
     move-exception v2
     goto :goto_res_mode_done
+
+    :catch_style_res
+    move-exception v2
+    goto :goto_style_res_done
 
     :catch_wb_res
     move-exception v2
@@ -1841,25 +1952,6 @@
 .method public static filterQualityAvailability(Ljava/lang/String;Z)Z
     .locals 1
 
-    if-nez p1, :cond_orig_ok
-
-    const-string v0, "rawjpeg"
-    invoke-virtual {v0, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-    move-result v0
-    if-eqz v0, :cond_check_raw
-
     const/4 v0, 0x1
     return v0
-
-    :cond_check_raw
-    const-string v0, "raw"
-    invoke-virtual {v0, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-    move-result v0
-    if-eqz v0, :cond_orig_ok
-
-    const/4 v0, 0x1
-    return v0
-
-    :cond_orig_ok
-    return p1
 .end method

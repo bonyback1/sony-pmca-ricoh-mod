@@ -144,7 +144,7 @@ if echo "${INSTALL_RES}" | grep -q "Success"; then
     echo "   2. 理光负片    (Ricoh Negative Film)"
     echo "   3. 高对比黑白  (Ricoh High Contrast B&W)"
     echo "   4. 森山大道风  (Moriyama Daido Style)"
-    echo "   5. 正负逆冲    (Ricoh Cross Process)"
+    echo "   5. 麦凯瑞 Kodachrome (Steve McCurry Kodachrome)"
     echo "=================================================================="
 else
     echo ""

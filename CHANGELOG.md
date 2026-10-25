@@ -11,6 +11,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-25 (B3.0)
+
+### Added & Enhanced (User State Preservation, Drive Mode Immunity, RAW Uninhibition & 5-Tier Verification)
+- **User Camera State Isolation & Faithful Restoration**:
+  - Captured and backed up user's pre-existing Creative Style (`ColorMode`, `Contrast`, `Saturation`, `Sharpness`), Dynamic Range Optimizer (`DRO`), and High Dynamic Range (`HDR`) from live `CameraSetting.getParameters()`.
+  - Upgraded White Balance backup to query live `CameraSetting.getParameters()`, eliminating uninitialized modifier reads.
+  - On `resetHook` / app exit, faithfully restored all user parameters back into hardware registers, guaranteeing zero camera setting drift across sessions.
+- **Drive Mode Native Preservation (Zero Clobbering)**:
+  - Neutralized `PictureEffectPlusController.setSADriveMode()` into a pure `return-void` no-op, preventing the app from resetting the user's continuous burst or timer drive modes when toggling effects menus.
+- **RAW Mode Lock Elimination & Seamless Dual Format**:
+  - Overrode `PictureEffectPlusController.getAvailableValue()` with `getSupportedValue()`, ensuring all 5 presets remain available and selectable even in pure RAW mode.
+  - Forced `PictureEffectPlusController.isAvailable()` and neutralized `isUnavailableSceneFactor()`, keeping the filter menu active and preserving the viewfinder OSD icon in RAW mode.
+  - Neutralized `INH_FEATURE_CAM_PARAMID_JPEG_QUALITY` in `PictureQualityController.isAvailable()`, preventing quality settings from becoming locked or greyed out.
+  - Patched `filterQualityAvailability` to unconditionally permit all format transitions, and guarded `Still_ImageSize` restoration against empty strings.
+  - Patched `PictureEffectController.createSupportedModeArray()` to guarantee `watercolor` (Steve McCurry Kodachrome) availability across all camera hardware revisions.
+- **Lifecycle Safety, Memory Leak Fixes & Strict Patch Pipeline**:
+  - Fixed inverted null check (`if-nez` -> `if-eqz`) on `mBackgroundImageView` in `onPause()` and `onDestroy()`, eliminating bitmap drawable leaks across repeated menu toggles.
+  - Patched `setFoooterGuide()` to display standard Return navigation instead of "Exit Application" when launched via Center Key.
+  - Enforced Strict Patch Mode in `tools/patch_apk.py`: aborts build instantly with explicit failure reports if any official Smali modification fails.
+- **Automated 5-Tier Verification Testbench (27/27 PASS)**:
+  - Introduced **Tier 5: Patched APK Bytecode Integrity Auditor** (`tools/testbench/test_patched_apk.py`), decompiling the built APK to audit Dalvik bytecode directly for all hooks, drive mode no-ops, lifecycle cleanups, and menu schemas.
+  - Total automated verification expanded from 20 to **27 checks (100% PASS)**.
+
 ## [1.9.0] - 2026-10-17 (B2.7)
 
 ### Added & Enhanced (BIONZ X ISP Hardware State Sanitization & Custom UI Assets)

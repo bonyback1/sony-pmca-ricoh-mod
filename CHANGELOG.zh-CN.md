@@ -11,6 +11,29 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并严格遵循 [语义化版本规范 (SemVer)](https://semver.org/lang/zh-CN/)。
 
+## [2.0.0] - 2026-10-25 (B3.0)
+
+### 新增与增强 (机身状态无损还原、驱动模式原生保护、RAW 限制终结与五阶测试套件)
+- **机身参数状态隔离备份与无损忠实还原**:
+  - 首次应用滤镜时，从底层活跃 `CameraSetting.getParameters()` 捕获并备份用户原有的创意风格 (`ColorMode`)、对比度 (`Contrast`)、饱和度 (`Saturation`)、锐度 (`Sharpness`)、动态范围优化 (`DRO`) 与高动态范围 (`HDR`)；
+  - 升级白平衡备份逻辑，直接从活跃 `CameraSetting` 获取 `LB` 与 `CC` 偏置，杜绝从空参数读取导致的未初始化问题；
+  - 退出应用 (`resetHook`) 时将上述参数 100% 忠实还原至底层硬件寄存器，彻底杜绝滤镜使用后机身参数漂移或被覆盖为默认值。
+- **驱动模式原生保护 (杜绝参数被篡改)**:
+  - 将 `PictureEffectPlusController.setSADriveMode()` 彻底重构为 `return-void` 空操作，彻底根治关闭或退出滤镜菜单时驱动模式被强制重置为单张拍摄的原生缺陷。
+- **RAW 模式锁定全面终结与纯净双格式**:
+  - 重写 `PictureEffectPlusController.getAvailableValue()`，改为调用 `getSupportedValue()`，确保即使在纯 RAW 模式下 5 款理光预设依然完全可选；
+  - 强制 `PictureEffectPlusController.isAvailable()` 返回真，并中和 `isUnavailableSceneFactor()`，实现 RAW 模式下取景 OSD 滤镜图标常驻且滤镜菜单自由进入；
+  - 中和 `PictureQualityController.isAvailable()` 中的 `INH_FEATURE_CAM_PARAMID_JPEG_QUALITY` 互斥锁，确保画质选项在任何状态下皆可自由切换；
+  - 优化 `filterQualityAvailability` 允许所有画质顺畅切换，并增加 `Still_ImageSize` 还原防空串保护；
+  - 修补 `PictureEffectController.createSupportedModeArray()`，确保 `watercolor` (麦凯瑞 Kodachrome) 在所有硬件世代机型上 100% 完整支持。
+- **生命周期安全、内存泄漏修复与严格构建管线**:
+  - 修复 `PictureEffectPlusOptionMenuLayout` 中 `mBackgroundImageView` 的反向空指针判断缺陷 (`if-nez` -> `if-eqz`)，彻底根治反复进出菜单导致的 Drawable 位图内存泄漏；
+  - 修复 `setFoooterGuide()`，由中心键唤出菜单时底部指南准确显示“返回”而非“退出应用程序”；
+  - 引入严格构建模式 (Strict Patch Mode)：任何官方 Smali 修补失败立即中断编译并打印详细违规项，杜绝静默失败。
+- **五阶自动化测试工作台重磅上线 (27/27 项全通)**:
+  - 新增 **Tier 5: 反编译字节码完整性审计器** (`tools/testbench/test_patched_apk.py`)，直接解包检查目标 Smali 字节码，严密核验生命周期 Hook、驱动模式 No-op、内存泄漏修复与菜单结构；
+  - 跨机型测试项从 20 项扩充至 **27 项全绿通过 (100% PASS)**。
+
 ## [1.9.0] - 2026-10-17 (B2.7)
 
 ### 新增与增强 (BIONZ X ISP 硬件状态清洗/杜绝黑白锁定与原生定制 UI 图标)

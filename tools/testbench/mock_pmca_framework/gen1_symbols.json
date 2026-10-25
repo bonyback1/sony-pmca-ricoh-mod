@@ -88,6 +88,7 @@
         "getInstance()Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;",
         "getCamera()Lcom/sony/scalar/hardware/CameraEx;",
         "getEmptyParameters()Landroid/util/Pair;",
+        "getParameters()Landroid/util/Pair;",
         "setParameters(Landroid/util/Pair;)V",
         "init()V",
         "terminate()V"

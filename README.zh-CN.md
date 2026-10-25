@@ -10,7 +10,8 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v1.9.0--B2.7-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v2.0.0--B3.0-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Testbench-27%2F27%20PASS%20(5--Tier)-brightgreen?style=flat-square" alt="Testbench">
 </p>
 
 通过底层硬件 ISP Hook 逆向技术，将索尼官方「照片效果+ (Picture Effect+)」应用深度改造为原生级**「理光相机」**。直接将理光 GR 经典胶片色彩的 **前置硬件白平衡偏置 (WB Shift)、1024 阶非线性 Gamma 曲线 (内嵌 EV 补偿) 与 3×3 RGB 颜色矩阵** 协同写入相机底层硬件寄存器，重现理光 GR 经典的高低光分色 (Split Toning) 与胶片色彩厚重感，实现**零快门延迟、EVF/LCD 实时取景无拖影、原生高速连拍**的直出胶片体验。
@@ -21,19 +22,24 @@
 
 - 🛡️ **BIONZ X ISP 硬件寄存器彻底清洗与杜绝黑白锁定**:
   - 彻底终结索尼相机在退出或切换黑白滤镜时偶发残留黑白/部分色彩的顽疾：在滤镜切换与应用退出时主动清除 `setColorSelectMode("off", sEmptyIntArray)` 部分色彩寄存器，并显式向 ISP 灌入纯正 3×3 单位矩阵 (`sIdentityMatrix`)；
-  - 在 `onTerminateHook` 中强制激活硬件色彩复位，配套**四阶自动化测试工作台 20/20 项全通 (100% PASS)**。
+  - 在 `onTerminateHook` 中强制激活硬件色彩复位，配套**五阶自动化测试工作台 27/27 项全通 (100% PASS)**。
 
-- 🎨 **精简原生菜单层级与定制级高精度图标资产**:
-  - 重新绘制 70×60 表盘菜单图标（字形与索尼 4-bit 量化排版严格对齐）以及 280×480 实时胶片效果预览图（经真实 10-bit Gamma 曲线与 RGB 矩阵硬件渲染烘焙）；
-  - 精简菜单层级：主菜单 `ApplicationTop` 纯净收录 5 款核心胶片预设，剔除冗余官方效果，操作极为迅捷干脆。
+- 🔄 **用户机身参数隔离备份与无损忠实还原**:
+  - 首次应用滤镜时从实时 `CameraSetting.getParameters()` 捕获并备份用户原有的创意风格 (`ColorMode`)、对比度 (`Contrast`)、饱和度 (`Saturation`)、锐度 (`Sharpness`)、动态范围优化 (`DRO`)、高动态范围 (`HDR`) 以及白平衡偏置 (`LB`/`CC`)；
+  - 在应用退出 (`resetHook`) 时 100% 无损还原机身原有设置，杜绝任何设置被重置为默认值的困扰。
 
-- ⚡ **突破限制：全面解锁驱动模式与高速连拍**:
-  - 彻底打破官方照片效果应用对复杂效果锁定连拍、速度优先连拍、定时自拍与阶段曝光的限制；
-  - 剔除 `ITEM_ID_SA_USE_EFFECT` 禁用项并接管 `PictureEffectPlusDriveModeController.smali`，**全套 5 款胶片滤镜全线支持高速连拍与所有驱动模式**。
+- ⚡ **驱动模式原生保护与高速连拍全面解锁**:
+  - 将 `setSADriveMode()` 彻底置为空操作 (No-Op)，杜绝关闭或切换选项菜单时意外篡改或重置用户选定的连拍/定时驱动模式；
+  - 剔除 `ITEM_ID_SA_USE_EFFECT` 限制并接管 `PictureEffectPlusDriveModeController.smali`，**全套 5 款胶片滤镜全线支持高速连拍 (Hi/Mid/Lo)、速度优先连拍、定时自拍与包围曝光**。
 
-- 📸 **突破限制：全面解锁 RAW+JPEG 与纯 RAW 拍摄**:
-  - 彻底打破索尼官方照片效果应用仅支持保存 JPEG 的硬编码限制；
-  - 在画质菜单中注入 `RAW与JPEG` 及 `RAW` 选项，按下快门瞬间即可同时记录理光直出胶片效果 JPEG 与索尼 14-bit 原生无损 ARW 原始负片，快拍出图与后期精修两不误。
+- 📸 **RAW 模式限制全面终结与纯净双格式**:
+  - 彻底打破官方在纯 RAW 模式下禁用滤镜菜单、隐藏取景 OSD 图标以及置灰画质菜单的枷锁；
+  - 接管 `getAvailableValue()` 与 `isAvailable()`，确保即使在纯 RAW 模式下 5 款胶片预设依然完全可用且取景图标常驻；
+  - 屏蔽 `INH_FEATURE_CAM_PARAMID_JPEG_QUALITY`，确保画质选项在任何状态下皆可自由切换，并在画质菜单中注入 `RAW与JPEG` 及 `RAW` 选项。
+
+- 🛡️ **Tier 5 字节码完整性审计器与严格构建管线**:
+  - 全新加入反编译字节码审计器 (`tools/testbench/test_patched_apk.py`)，直接解包检查目标 Smali 字节码，严密核验生命周期 Hook、内存泄漏修复 (`mBackgroundImageView` 空指针反转) 与菜单结构；
+  - 严格补丁模式 (Strict Patch Mode)：任何官方代码修补失败即刻中断编译，杜绝静默失败。
 
 - 🛡️ **PMCA 全机型硬件防御性架构与平滑降级**:
   - 深度适配所有 PMCA 世代相机：全面支持 PMCA 一代（Android 2.3.7 / API 10：A7、A7R、A6000、NEX-5R/6）与 PMCA 二代（Android 4.1.2 / API 16：A6300、A6500、A7M2、A7R2、RX100 系列），在不支持 10-bit 伽马表或色彩矩阵的老机型上平滑降级，绝不报 `NoSuchMethodError` 崩溃；

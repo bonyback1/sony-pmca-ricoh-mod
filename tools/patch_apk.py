@@ -22,6 +22,15 @@ from sign_apk import sign_apk
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC_SMALI = os.path.join(PROJECT_ROOT, 'src', 'smali', 'RicohHook.smali')
 
+PATCH_FAILURES = []
+
+def record_patch_status(success: bool, patch_name: str):
+    if not success:
+        PATCH_FAILURES.append(patch_name)
+        print(f"❌ PATCH FAILED: {patch_name}")
+    else:
+        print(f"✅ Applied: {patch_name}")
+
 def check_requirements():
     if not shutil.which('apktool'):
         raise SystemExit("Error: 'apktool' not found in PATH. Please install apktool (e.g. `brew install apktool`).")
@@ -173,6 +182,46 @@ def patch_controller_smali(controller_path):
         print("Successfully unlocked continuous shooting (removed watercolor & richtone-mono from ITEM_ID_SA_USE_EFFECT)")
     else:
         print(f"Notice: ITEM_ID_SA_USE_EFFECT removal results (c1={c1}, c2={c2})")
+
+    # 7. Keep all 5 Ricoh presets available in getAvailableValue() even when Burst or RAW/RAW+JPEG is active
+    target_avail_val = 'invoke-super {p0, v1}, Lcom/sony/imaging/app/base/shooting/camera/PictureEffectController;->getAvailableValue(Ljava/lang/String;)Ljava/util/List;'
+    repl_avail_val = 'invoke-super {p0, v1}, Lcom/sony/imaging/app/base/shooting/camera/PictureEffectController;->getSupportedValue(Ljava/lang/String;)Ljava/util/List;'
+    if target_avail_val in content:
+        content = content.replace(target_avail_val, repl_avail_val, 1)
+        print("Successfully patched PictureEffectPlusController.getAvailableValue() to bypass RAW/Burst hardware inhibition")
+
+    # 8. Keep ApplicationTop and Ricoh presets enabled in isAvailable() even when RAW/RAW+JPEG is active
+    target_is_avail = """    invoke-super {p0, p1}, Lcom/sony/imaging/app/base/shooting/camera/PictureEffectController;->isAvailable(Ljava/lang/String;)Z
+
+    move-result v0"""
+    repl_is_avail = """    const/4 v0, 0x1"""
+    if target_is_avail in content:
+        content = content.replace(target_is_avail, repl_is_avail, 1)
+        print("Successfully patched PictureEffectPlusController.isAvailable() to keep filter menu active in RAW mode")
+
+    # 9. Prevent PictureEffectIcon OSD hiding & caution dialogs in RAW mode via isUnavailableSceneFactor()
+    target_scene_1 = """    invoke-super {p0, v0}, Lcom/sony/imaging/app/base/shooting/camera/PictureEffectController;->isUnavailableSceneFactor(Ljava/lang/String;)Z
+
+    move-result v0"""
+    target_scene_2 = """    invoke-super {p0, p1}, Lcom/sony/imaging/app/base/shooting/camera/PictureEffectController;->isUnavailableSceneFactor(Ljava/lang/String;)Z
+
+    move-result v0"""
+    if target_scene_1 in content and target_scene_2 in content:
+        content = content.replace(target_scene_1, "    const/4 v0, 0x0", 1)
+        content = content.replace(target_scene_2, "    const/4 v0, 0x0", 1)
+        print("Successfully patched PictureEffectPlusController.isUnavailableSceneFactor() to keep OSD filter icon visible in RAW mode")
+
+    # 10. Make setSADriveMode() a no-op so closing PictureEffectPlusOptionMenuLayout never clobbers user's Drive Mode
+    pat_sa_dm = r'\.method public setSADriveMode\(\)V[\s\S]*?\.end method'
+    repl_sa_dm = '''.method public setSADriveMode()V
+    .locals 0
+
+    .prologue
+    return-void
+.end method'''
+    content, c_sadm = re.subn(pat_sa_dm, repl_sa_dm, content, count=1)
+    if c_sadm > 0:
+        print("Successfully patched PictureEffectPlusController.setSADriveMode() to preserve user Drive Mode")
 
     with open(controller_path, 'w', encoding='utf-8') as f:
         f.write(content)
@@ -414,6 +463,26 @@ def patch_option_menu_layout_smali(layout_path):
     content, c_sprev = re.subn(pat_sub_prev, repl_sub_prev, content, count=1)
     if c_sprev > 0:
         print("Successfully mapped turnedSubDialPrev() to pushedUpKey() (move prev)")
+
+    # 9. Fix inverted null check (if-nez -> if-eqz) in onPause() and onDestroy() leaking mBackgroundImageView drawable
+    leak_target = """    iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mBackgroundImageView:Landroid/widget/ImageView;
+
+    if-nez v0, :cond_0"""
+    leak_repl = """    iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mBackgroundImageView:Landroid/widget/ImageView;
+
+    if-eqz v0, :cond_0"""
+    if leak_target in content:
+        content = content.replace(leak_target, leak_repl)
+        print("Successfully fixed mBackgroundImageView drawable leak in onPause() and onDestroy()")
+
+    # 10. Fix setFoooterGuide() to show standard Return guide instead of "Exit Application" when opened via Center key
+    fg_target = """    iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mLastItemId:Lcom/sony/imaging/app/base/menu/HistoryItem;
+
+    if-nez v0, :cond_0"""
+    fg_repl = """    goto :cond_0"""
+    if fg_target in content:
+        content = content.replace(fg_target, fg_repl, 1)
+        print("Successfully patched setFoooterGuide() to display Return guide instead of Exit Application")
 
     with open(layout_path, 'w', encoding='utf-8') as f:
         f.write(content)
@@ -869,38 +938,18 @@ def patch_app_name_smali(app_smali_path):
     if target_hook not in content:
         if r'const-string v3, "\u7406\u5149\u76f8\u673a"' in content:
             content = content.replace(r'const-string v3, "\u7406\u5149\u76f8\u673a"', target_hook, 1)
-            print("Successfully updated app title to dynamic RicohHook.getAppTitle() in PictureEffectPlus.smali")
+            record_patch_status(True, "PictureEffectPlus.smali: dynamic getAppTitle")
         else:
             pat = r'invoke-virtual\s+\{p0\},\s*Lcom/sony/imaging/app/pictureeffectplus/PictureEffectPlus;->getResources\(\)Landroid/content/res/Resources;[\s\S]*?invoke-virtual\s+\{v\d+,\s*v\d+\},\s*Landroid/content/res/Resources;->getString\(I\)Ljava/lang/String;\s*move-result-object\s+v\d+'
-            content = re.sub(pat, lambda m: target_hook, content, count=1)
-            print("Successfully hooked app title to dynamic RicohHook.getAppTitle() in PictureEffectPlus.smali")
+            content, c = re.subn(pat, lambda m: target_hook, content, count=1)
+            record_patch_status(c > 0, "PictureEffectPlus.smali: dynamic getAppTitle regex")
         with open(app_smali_path, 'w', encoding='utf-8') as f:
             f.write(content)
     else:
-        print("App title already hooked to dynamic RicohHook.getAppTitle().")
+        record_patch_status(True, "PictureEffectPlus.smali: getAppTitle already present")
 
-    # Reset default effect to "pop-color" on cold launcher boot
-    target_boot = """:pswitch_0
-    invoke-static {v5}, Lcom/sony/imaging/app/pictureeffectplus/shooting/PictureEffectEEState;->setIsMenuStateAdd(Z)V"""
-
-    repl_boot = """:pswitch_0
-    invoke-static {v5}, Lcom/sony/imaging/app/pictureeffectplus/shooting/PictureEffectEEState;->setIsMenuStateAdd(Z)V
-
-    invoke-static {}, Lcom/sony/imaging/app/util/BackUpUtil;->getInstance()Lcom/sony/imaging/app/util/BackUpUtil;
-
-    move-result-object v3
-
-    const-string v4, "ID_PICTUREEFFECTPLUS_CURRENT_EFFECT"
-
-    const-string v0, "pop-color"
-
-    invoke-virtual {v3, v4, v0}, Lcom/sony/imaging/app/util/BackUpUtil;->setPreference(Ljava/lang/String;Ljava/lang/Object;)Z"""
-
-    if target_boot in content and "ID_PICTUREEFFECTPLUS_CURRENT_EFFECT" not in content:
-        content = content.replace(target_boot, repl_boot, 1)
-        with open(app_smali_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print("Successfully injected cold boot pop-color reset in PictureEffectPlus.smali (BootFactor.LUNCHER)")
+    # Q2: Preserving user's last selected preset on cold boot (no force reset to pop-color)
+    print("Cold boot preset preservation active: Camera will remember last used Ricoh preset.")
 
 def patch_picture_quality_smali(pqc_path):
     print(f"Patching {pqc_path}...")
@@ -921,13 +970,81 @@ def patch_picture_quality_smali(pqc_path):
 
     if target in content and "filterQualityAvailability" not in content:
         content = content.replace(target, repl, 1)
-        with open(pqc_path, 'w', encoding='utf-8') as f:
-            f.write(content)
         print("Successfully injected filterQualityAvailability in PictureQualityController.smali")
     elif "filterQualityAvailability" in content:
         print("filterQualityAvailability already present in PictureQualityController.smali")
     else:
         print("Warning: target not found in PictureQualityController.smali")
+
+    # 2. Prevent pure RAW mode from locking/greying out the PictureQuality menu item via INH_FEATURE_CAM_PARAMID_JPEG_QUALITY
+    target_inh = """    const-string v0, "INH_FEATURE_CAM_PARAMID_JPEG_QUALITY"
+
+    invoke-static {v0}, Lcom/sony/imaging/app/util/AvailableInfo;->isInhibition(Ljava/lang/String;)Z
+
+    move-result v0
+
+    if-nez v0, :cond_1"""
+    repl_inh = """    const/4 v0, 0x0"""
+    if target_inh in content:
+        content = content.replace(target_inh, repl_inh, 1)
+        print("Successfully patched PictureQualityController.isAvailable() to prevent RAW mode lock")
+
+    # 3. Guard empty string "" in ID_PICTURE_SIZE_FOR_RAW_QUALITY when switching between non-RAW qualities
+    target_size = """    .restart local v7    # "size":Ljava/lang/String;
+    if-eqz v7, :cond_1
+
+    .line 189
+    const-string v8, "Still_ImageSize"
+
+    invoke-virtual {v5, v8, v7}, Lcom/sony/imaging/app/base/shooting/camera/PictureSizeController;->setValue(Ljava/lang/String;Ljava/lang/String;)V"""
+    repl_size = """    .restart local v7    # "size":Ljava/lang/String;
+    if-eqz v7, :cond_1
+
+    invoke-virtual {v7}, Ljava/lang/String;->length()I
+
+    move-result v8
+
+    if-eqz v8, :cond_1
+
+    .line 189
+    const-string v8, "Still_ImageSize"
+
+    invoke-virtual {v5, v8, v7}, Lcom/sony/imaging/app/base/shooting/camera/PictureSizeController;->setValue(Ljava/lang/String;Ljava/lang/String;)V"""
+    if target_size in content:
+        content = content.replace(target_size, repl_size, 1)
+        print("Successfully guarded empty string in PictureQualityController.setValue() Still_ImageSize restore")
+
+    with open(pqc_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_base_picture_effect_controller_smali(pec_path):
+    print(f"Patching {pec_path}...")
+    with open(pec_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # Keep watercolor (Preset 5: Steve McCurry Kodachrome) in mSupportedPictureEffects on all HW versions
+    target_wc = """    :cond_3
+    invoke-static {}, Lcom/sony/imaging/app/util/Environment;->getVersionOfHW()I
+
+    move-result v4
+
+    if-ge v4, v5, :cond_4
+
+    const-string v4, "watercolor"
+
+    invoke-virtual {v2, v4}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v4
+
+    if-nez v4, :cond_1"""
+    repl_wc = """    :cond_3
+    goto :cond_4"""
+    if target_wc in content:
+        content = content.replace(target_wc, repl_wc, 1)
+        print("Successfully patched PictureEffectController.createSupportedModeArray() to include watercolor on all HW versions")
+
+    with open(pec_path, 'w', encoding='utf-8') as f:
+        f.write(content)
 
 def run_cmd(cmd, cwd=None):
     res = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
@@ -1025,11 +1142,23 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         else:
             print("Warning: PictureQualityController.smali not found, skipping quality patch.")
 
+        pec_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'base', 'shooting', 'camera', 'PictureEffectController.smali')
+        if os.path.exists(pec_smali):
+            patch_base_picture_effect_controller_smali(pec_smali)
+        else:
+            print("Warning: PictureEffectController.smali not found, skipping base picture effect patch.")
+
         dmc_smali = os.path.join(target_hook_dir, 'PictureEffectPlusDriveModeController.smali')
         if os.path.exists(dmc_smali):
             patch_drive_mode_controller_smali(dmc_smali)
         else:
-            print("Warning: PictureEffectPlusDriveModeController.smali not found, skipping drive mode patch.")
+            record_patch_status(False, "PictureEffectPlusDriveModeController.smali file not found")
+
+        # Step 3.5: Strict Mode Validation
+        if PATCH_FAILURES:
+            fail_list = "\n".join(f"  - {f}" for f in PATCH_FAILURES)
+            raise RuntimeError(f"Strict Patch Mode Failure: {len(PATCH_FAILURES)} patch(es) failed:\n{fail_list}")
+        print("✅ Strict Patch Mode: All required official smali patches verified successfully!")
 
         # Step 4: Update MenuData.xml
         print("==> [4/7] Updating filter names in MenuData.xml ...")

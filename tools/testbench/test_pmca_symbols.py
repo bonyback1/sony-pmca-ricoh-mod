@@ -578,14 +578,48 @@ def check_isp_bw_lock_prevention(smali_dir: str) -> CheckResult:
                 violations.append(
                     f"{hook_file}: resetHook() does not clear Partial Color extraction via setColorSelectMode(\"off\", sEmptyIntArray)!"
                 )
+            reset_code = "\n".join(
+                line for line in reset_body.splitlines() if not line.lstrip().startswith("#")
+            )
+            if ":cond_style_fallback" in reset_code or '"standard"' in reset_code:
+                violations.append(
+                    f"{hook_file}: resetHook() still contains style fallback overwriting user Creative Style to 'standard'!"
+                )
+            if "sAppliedPreset:Ljava/lang/String;" not in reset_body or "sAppliedCameraHash:I" not in reset_body:
+                violations.append(
+                    f"{hook_file}: resetHook() does not clear sAppliedPreset / sAppliedCameraHash dedup cache!"
+                )
 
-        # 2. Verify applyHook clears setColorSelectMode
+        # 2. Verify applyHook clears setColorSelectMode, uses split style flags & dedup cache
         apply_m = re.search(r'\.method public static applyHook\b[\s\S]*?\.end method', content)
         if apply_m:
             apply_body = apply_m.group(0)
             if "setColorSelectMode(Ljava/lang/String;[I)V" not in apply_body:
                 violations.append(
                     f"{hook_file}: applyHook() does not clear Partial Color extraction via setColorSelectMode(\"off\", sEmptyIntArray)!"
+                )
+            for flag in (
+                "sHasSavedOriginalColorMode:Z",
+                "sHasSavedOriginalTone:Z",
+                "sHasSavedOriginalDRO:Z",
+                "sHasSavedOriginalHDR:Z",
+            ):
+                if flag not in apply_body:
+                    violations.append(
+                        f"{hook_file}: applyHook() missing split backup flag '{flag}' (monolithic style try/catch hazard)!"
+                    )
+            if "sAppliedPreset:Ljava/lang/String;" not in apply_body or "sAppliedCameraHash:I" not in apply_body:
+                violations.append(
+                    f"{hook_file}: applyHook() missing sAppliedPreset / sAppliedCameraHash deduplication cache!"
+                )
+
+        # 2b. Verify getLanguageType caches Locale reference
+        lang_m = re.search(r'\.method public static getLanguageType\(\)I[\s\S]*?\.end method', content)
+        if lang_m:
+            lang_body = lang_m.group(0)
+            if "sCachedLocale:Ljava/util/Locale;" not in lang_body or "sCachedLangType:I" not in lang_body:
+                violations.append(
+                    f"{hook_file}: getLanguageType() does not cache result via sCachedLocale / sCachedLangType!"
                 )
 
         # 3. Verify onTerminateHook forces sIsRicohActive = 1

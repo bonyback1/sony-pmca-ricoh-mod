@@ -138,16 +138,56 @@ def check_menu_layout_safety(smali_root: str) -> CheckResult:
     if re.search(leak_pattern, content):
         violations.append("Found inverted null check 'if-nez' on mBackgroundImageView; leaking background drawable in onPause/onDestroy!")
 
-    # 2. Check for closeLayout() in pushedMenuKey when mLastItemId is null (preventing unwanted app exit)
+    # 2. Check pushedMenuKey P1 fixes: closeLayout() when mLastItemId null, clear mIsChangedValue before super cancel, null-guard mPreviousSelectedeffect
     pushed_menu_m = re.search(r'\.method public pushedMenuKey\(\)I[\s\S]*?\.end method', content)
     if pushed_menu_m:
         body = pushed_menu_m.group(0)
         if "invoke-virtual {v1}, Landroid/app/Activity;->finish()V" in body or "Activity;->finish()V" in body:
             violations.append("pushedMenuKey still calls Activity.finish() when mLastItemId is null; cancels to shooting screen expected!")
+        if "->mIsChangedValue:Z" not in body:
+            violations.append("pushedMenuKey() does not clear mIsChangedValue before super.pushedMenuKey(), causing double setValue() on cancel!")
+        if not re.search(r'mPreviousSelectedeffect:Ljava/lang/String;\s*if-eqz v\d+, :cond_\w+', body):
+            violations.append("pushedMenuKey() does not skip setValue() when mPreviousSelectedeffect is null!")
+    else:
+        violations.append("pushedMenuKey() method not found in PictureEffectPlusOptionMenuLayout.smali")
+
+    # 3. Check live viewfinder preview wiring, static PNG bypass, strict API < 16 safety, & turnedMainDialNext()
+    live_setup_sig = "RicohHook;->setupLivePreviewMenu(Landroid/view/ViewGroup;Landroid/widget/ImageView;Landroid/widget/TextView;Landroid/widget/TextView;Landroid/view/View;)V"
+    if live_setup_sig not in content:
+        violations.append("PictureEffectPlusOptionMenuLayout.smali does not call RicohHook.setupLivePreviewMenu()")
+    for m_sig in (
+        r'\.method public onResume\(\)V[\s\S]*?\.end method',
+        r'\.method public onItemSelected\([^\)]*\)V[\s\S]*?\.end method',
+    ):
+        mm = re.search(m_sig, content)
+        if not mm:
+            violations.append(f"Expected method '{m_sig}' not found in PictureEffectPlusOptionMenuLayout.smali")
+        else:
+            m_body = mm.group(0)
+            if "ImageView;->setBackgroundResource(I)V" in m_body or "->getBackgroundDrawable(Ljava/lang/String;)I" in m_body:
+                violations.append(f"{mm.group(0).splitlines()[0]} still loads static preview PNG onto mBackgroundImageView!")
+    if "->setBackground(Landroid/graphics/drawable/Drawable;)V" in content or "->setAlpha(F)V" in content:
+        violations.append("PictureEffectPlusOptionMenuLayout.smali uses API 16+ View method (setBackground/setAlpha)!")
+    if not re.search(r'\.method public turnedMainDialNext\(\)I[\s\S]*?\.end method', content):
+        violations.append("PictureEffectPlusOptionMenuLayout.smali missing explicit turnedMainDialNext() override!")
+
+    # 4. Check PictureEffectSpecialBaseMenuAdapter has only 1 getMenuItemDrawable() call (no double PNG decode)
+    adapter_path = os.path.join(
+        smali_root, "com", "sony", "imaging", "app", "pictureeffectplus", "shooting", "layout",
+        "PictureEffectPlusOptionMenuLayout$PictureEffectSpecialBaseMenuAdapter.smali"
+    )
+    if not os.path.exists(adapter_path):
+        violations.append("PictureEffectSpecialBaseMenuAdapter.smali not found")
+    else:
+        with open(adapter_path, "r", encoding="utf-8") as af:
+            adapter_body = af.read()
+        decode_calls = len(re.findall(r'BaseMenuService;->getMenuItemDrawable\(Ljava/lang/String;\)Landroid/graphics/drawable/Drawable;', adapter_body))
+        if decode_calls != 1:
+            violations.append(f"PictureEffectSpecialBaseMenuAdapter calls BaseMenuService.getMenuItemDrawable() {decode_calls} times (expected 1)!")
 
     dur = time.time() - start_time
     passed = len(violations) == 0
-    msg = "Menu layout drawable leak fix and cancel-to-shooting navigation verified" if passed else f"{len(violations)} layout safety hazards found"
+    msg = "Menu layout P1 caching, adapter single-decode, cancel-path & dial overrides verified" if passed else f"{len(violations)} layout safety/perf hazards found"
     return CheckResult("Menu Layout Safety Audit", passed, dur, msg, violations)
 
 
@@ -216,10 +256,106 @@ def check_menudata_entries(work_dir: str) -> CheckResult:
         if sub_items != expected:
             violations.append(f"ApplicationTop items do not match expected 5 Ricoh presets! Found: {sub_items}")
 
+    if 'ItemId="ApplicationSettings"' in content:
+        violations.append("MenuData.xml still contains permanently disabled ApplicationSettings Layer1 item!")
+
     dur = time.time() - start_time
     passed = len(violations) == 0
     msg = "MenuData.xml strictly pruned to 5 Ricoh presets" if passed else f"{len(violations)} menu entries violations found"
     return CheckResult("MenuData.xml Presets Audit", passed, dur, msg, violations)
+
+
+def check_applog_silenced(smali_root: str) -> CheckResult:
+    start_time = time.time()
+    violations = []
+    applog_path = os.path.join(smali_root, "com", "sony", "imaging", "app", "pictureeffectplus", "AppLog.smali")
+    if not os.path.exists(applog_path):
+        return CheckResult("AppLog Stack-Walk Silence Audit", False, time.time() - start_time, "AppLog.smali not found", [applog_path])
+
+    with open(applog_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    if re.search(r'\.field public static final ENABLE_LOG_DEBUG:Z\s*=\s*true', content):
+        violations.append("AppLog.ENABLE_LOG_DEBUG is still true!")
+
+    for mname in ("getMethodName", "getClassName"):
+        mm = re.search(rf'\.method public static {mname}\(\)Ljava/lang/String;[\s\S]*?\.end method', content)
+        if not mm:
+            violations.append(f"AppLog.{mname}() not found")
+        elif "getStackTrace" in mm.group(0) or "Ljava/lang/Exception;" in mm.group(0):
+            violations.append(f"AppLog.{mname}() still allocates Exception / unwinds stack trace!")
+
+    for mname in ("checkIf", "enter", "exit", "info", "trace"):
+        mm = re.search(rf'\.method public static (?:final )?{mname}\(Ljava/lang/String;Ljava/lang/String;\)V[\s\S]*?\.end method', content)
+        if not mm:
+            violations.append(f"AppLog.{mname}() not found")
+        elif "outLog" in mm.group(0):
+            violations.append(f"AppLog.{mname}() still calls outLog() on hot path!")
+
+    dur = time.time() - start_time
+    passed = len(violations) == 0
+    msg = "AppLog debug/trace/stack-walk helpers silenced cleanly" if passed else f"{len(violations)} AppLog performance hazards found"
+    return CheckResult("AppLog Stack-Walk Silence Audit", passed, dur, msg, violations)
+
+
+def check_ricoh_hook_p0_hardening(smali_root: str) -> CheckResult:
+    start_time = time.time()
+    violations = []
+    hook_path = os.path.join(smali_root, "com", "sony", "imaging", "app", "pictureeffectplus", "shooting", "camera", "RicohHook.smali")
+    if not os.path.exists(hook_path):
+        return CheckResult("RicohHook P0 Hardening Audit", False, time.time() - start_time, "RicohHook.smali not found", [hook_path])
+
+    with open(hook_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    reset_m = re.search(r'\.method public static resetHook\b[\s\S]*?\.end method', content)
+    if not reset_m:
+        violations.append("RicohHook.resetHook() not found")
+    else:
+        reset_body = reset_m.group(0)
+        reset_code = "\n".join(
+            line for line in reset_body.splitlines() if not line.lstrip().startswith("#")
+        )
+        if ":cond_style_fallback" in reset_code or '"standard"' in reset_code:
+            violations.append("resetHook() contains style fallback overwriting user Creative Style to 'standard'!")
+        if "sAppliedPreset:Ljava/lang/String;" not in reset_body or "sAppliedCameraHash:I" not in reset_body:
+            violations.append("resetHook() does not clear sAppliedPreset / sAppliedCameraHash!")
+
+    apply_m = re.search(r'\.method public static applyHook\b[\s\S]*?\.end method', content)
+    if not apply_m:
+        violations.append("RicohHook.applyHook() not found")
+    else:
+        apply_body = apply_m.group(0)
+        for flag in (
+            "sHasSavedOriginalColorMode:Z",
+            "sHasSavedOriginalTone:Z",
+            "sHasSavedOriginalDRO:Z",
+            "sHasSavedOriginalHDR:Z",
+        ):
+            if flag not in apply_body:
+                violations.append(f"applyHook() missing split backup flag '{flag}'")
+        if "sAppliedPreset:Ljava/lang/String;" not in apply_body or "sAppliedCameraHash:I" not in apply_body:
+            violations.append("applyHook() missing sAppliedPreset / sAppliedCameraHash dedup cache!")
+
+    lang_m = re.search(r'\.method public static getLanguageType\(\)I[\s\S]*?\.end method', content)
+    if not lang_m:
+        violations.append("RicohHook.getLanguageType() not found")
+    else:
+        lang_body = lang_m.group(0)
+        if "sCachedLocale:Ljava/util/Locale;" not in lang_body or "sCachedLangType:I" not in lang_body:
+            violations.append("getLanguageType() missing sCachedLocale / sCachedLangType caching!")
+
+    # Live preview UI helper & strict API < 16 View safety
+    live_helper_sig = "setupLivePreviewMenu(Landroid/view/ViewGroup;Landroid/widget/ImageView;Landroid/widget/TextView;Landroid/widget/TextView;Landroid/view/View;)V"
+    if live_helper_sig not in content:
+        violations.append(f"RicohHook.smali missing live preview helper '{live_helper_sig}'")
+    if "->setBackground(Landroid/graphics/drawable/Drawable;)V" in content or "->setAlpha(F)V" in content:
+        violations.append("RicohHook.smali uses API 16+ View method (setBackground/setAlpha) that crashes Dalvik on A6300!")
+
+    dur = time.time() - start_time
+    passed = len(violations) == 0
+    msg = "RicohHook P0/P1 style-safety, split try/catch, dedup, Locale & preview cache verified" if passed else f"{len(violations)} RicohHook P0/P1 violations found"
+    return CheckResult("RicohHook P0 Hardening Audit", passed, dur, msg, violations)
 
 
 def run_tier5_tests(apk_path: str, verbose: bool = False) -> TierResult:
@@ -243,6 +379,8 @@ def run_tier5_tests(apk_path: str, verbose: bool = False) -> TierResult:
             check_sa_drive_mode_noop(smali_root),
             check_sa_list_burst_unlocked(smali_root),
             check_ricoh_hook_dispatch(smali_root),
+            check_ricoh_hook_p0_hardening(smali_root),
+            check_applog_silenced(smali_root),
             check_menu_layout_safety(smali_root),
             check_quality_raw_protection(smali_root),
             check_app_root_cleanup(smali_root),

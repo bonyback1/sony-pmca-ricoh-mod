@@ -381,16 +381,57 @@ def patch_option_menu_layout_smali(layout_path):
     if c_spmid > 0:
         print("Successfully patched setPreviousMenuID() with null check")
 
-    # 5. Patch pushedMenuKey() to call closeLayout() when mLastItemId is null
-    menu_exit_target = """    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->getActivity()Landroid/app/Activity;
+    # 5. Replace pushedMenuKey() to null-guard mPreviousSelectedeffect, avoid double setValue on cancel, and closeLayout() cleanly
+    pat_pmk = r'\.method public pushedMenuKey\(\)I[\s\S]*?\.end method'
+    repl_pmk = '''.method public pushedMenuKey()I
+    .locals 4
 
-    move-result-object v1
+    .prologue
+    const/4 v0, 0x1
 
-    invoke-virtual {v1}, Landroid/app/Activity;->finish()V"""
-    menu_exit_repl = """    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->closeLayout()V"""
-    if menu_exit_target in content:
-        content = content.replace(menu_exit_target, menu_exit_repl)
-        print("Successfully patched pushedMenuKey() to closeLayout() back to shooting")
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mPreviousSelectedeffect:Ljava/lang/String;
+
+    if-eqz v1, :cond_1
+
+    iget-object v2, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;
+
+    invoke-virtual {v1, v2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v1
+
+    if-nez v1, :cond_1
+
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mController:Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;
+
+    const-string v2, "ApplicationTop"
+
+    iget-object v3, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mPreviousSelectedeffect:Ljava/lang/String;
+
+    invoke-virtual {v1, v2, v3}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->setValue(Ljava/lang/String;Ljava/lang/String;)V
+
+    :cond_1
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mLastItemId:Lcom/sony/imaging/app/base/menu/HistoryItem;
+
+    if-nez v1, :cond_2
+
+    invoke-virtual {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->closeLayout()V
+
+    :goto_0
+    return v0
+
+    :cond_2
+    const/4 v2, 0x0
+
+    iput-boolean v2, p0, Lcom/sony/imaging/app/base/menu/layout/SpecialScreenMenuLayout;->mIsChangedValue:Z
+
+    invoke-super {p0}, Lcom/sony/imaging/app/base/menu/layout/SpecialScreenMenuLayout;->pushedMenuKey()I
+
+    move-result v0
+
+    goto :goto_0
+.end method'''
+    content, c_pmk = re.subn(pat_pmk, repl_pmk, content, count=1)
+    record_patch_status(c_pmk > 0, "PictureEffectPlusOptionMenuLayout.smali: safe single-commit pushedMenuKey()")
 
     # 6. Patch pushedRightKey() and pushedLeftKey()
     pat_right = r'\.method public pushedRightKey\(\)I[\s\S]*?\.end method'
@@ -424,7 +465,7 @@ def patch_option_menu_layout_smali(layout_path):
         print("Successfully mapped pushedLeftKey() to pushedUpKey() (move prev)")
 
     # 7. Add turnedMainDialNext() and turnedMainDialPrev()
-    if "turnedMainDialNext()I" not in content:
+    if ".method public turnedMainDialNext()I" not in content:
         main_dial_methods = '''
 .method public turnedMainDialNext()I
     .locals 1
@@ -484,7 +525,89 @@ def patch_option_menu_layout_smali(layout_path):
         content = content.replace(fg_target, fg_repl, 1)
         print("Successfully patched setFoooterGuide() to display Return guide instead of Exit Application")
 
+    # 11a. Configure live-view preview menu in onCreateView() via RicohHook.setupLivePreviewMenu()
+    ocv_locals_pat = (
+        r'(\.method public onCreateView\(Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Landroid/os/Bundle;\)Landroid/view/View;\s*)'
+        r'\.locals 4\b'
+    )
+    content, c_ocv_locals = re.subn(ocv_locals_pat, r'\1.locals 5', content, count=1)
+
+    ocv_ret_pat = (
+        r'(    const-string v1, "onCreateView optionMenuLayout"\s*'
+        r'invoke-static \{v1\}, Lcom/sony/imaging/app/util/PTag;->end\(Ljava/lang/String;\)V\s*(?:\.line \d+\s*)?)'
+        r'iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mCurrentView:Landroid/view/ViewGroup;\s*'
+        r'return-object v1\s*'
+        r'\.end method'
+    )
+    ocv_ret_repl = (
+        r'\1iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mCurrentView:Landroid/view/ViewGroup;\n\n'
+        r'    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mBackgroundImageView:Landroid/widget/ImageView;\n\n'
+        r'    iget-object v2, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mItemNameView:Landroid/widget/TextView;\n\n'
+        r'    iget-object v3, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mGuideTextView:Landroid/widget/TextView;\n\n'
+        r'    iget-object v4, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSpecialScreenView:Lcom/sony/imaging/app/base/menu/layout/SpecialScreenView;\n\n'
+        r'    invoke-static {v0, v1, v2, v3, v4}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->setupLivePreviewMenu(Landroid/view/ViewGroup;Landroid/widget/ImageView;Landroid/widget/TextView;Landroid/widget/TextView;Landroid/view/View;)V\n\n'
+        r'    return-object v0\n'
+        r'.end method'
+    )
+    content, c_ocv_ret = re.subn(ocv_ret_pat, ocv_ret_repl, content, count=1)
+    record_patch_status(
+        c_ocv_locals > 0 and c_ocv_ret > 0 and 'RicohHook;->setupLivePreviewMenu' in content,
+        "PictureEffectPlusOptionMenuLayout.smali: configure live-view preview menu in onCreateView()"
+    )
+
+    # 11b. Skip static sample PNG loading in onItemSelected() and onResume() for live viewfinder preview
+    static_bg_pat = (
+        r'\s*iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mBackgroundImageView:Landroid/widget/ImageView;\s*'
+        r'iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;\s*'
+        r'invoke-direct \{p0, v1\}, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->getBackgroundDrawable\(Ljava/lang/String;\)I\s*'
+        r'move-result v1\s*'
+        r'invoke-virtual \{v0, v1\}, Landroid/widget/ImageView;->setBackgroundResource\(I\)V'
+    )
+    content, c_bg = re.subn(static_bg_pat, '', content)
+    record_patch_status(
+        c_bg == 2,
+        "PictureEffectPlusOptionMenuLayout.smali: skip static sample PNG loading for live preview"
+    )
+
+    # 12. Remove duplicate mItemNameView.setText() in onItemSelected() (already updated by super.onItemSelected())
+    dup_title_pat = (
+        r'iput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;'
+        r'\s*(?:\.line \d+\s*)?'
+        r'iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mItemNameView:Landroid/widget/TextView;\s*'
+        r'iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mService:Lcom/sony/imaging/app/base/menu/BaseMenuService;\s*'
+        r'iget-object v2, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;\s*'
+        r'invoke-virtual \{v1, v2\}, Lcom/sony/imaging/app/base/menu/BaseMenuService;->getMenuItemText\(Ljava/lang/String;\)Ljava/lang/CharSequence;\s*'
+        r'move-result-object v1\s*'
+        r'invoke-virtual \{v0, v1\}, Landroid/widget/TextView;->setText\(Ljava/lang/CharSequence;\)V'
+    )
+    # Note: the iput-object instruction is on p0: `iput-object v0, p0, ...`
+    dup_title_pat = dup_title_pat.replace(
+        'iput-object v0, Lcom/sony/imaging',
+        'iput-object v0, p0, Lcom/sony/imaging'
+    )
+    dup_title_repl = 'iput-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;'
+    content, c_dup_title = re.subn(dup_title_pat, dup_title_repl, content, count=1)
+    record_patch_status(c_dup_title > 0, "PictureEffectPlusOptionMenuLayout.smali: remove duplicate mItemNameView.setText() in onItemSelected()")
+
     with open(layout_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_option_menu_adapter_smali(adapter_path):
+    """Remove redundant double BaseMenuService.getMenuItemDrawable() call in PictureEffectSpecialBaseMenuAdapter."""
+    print(f"Patching {adapter_path}...")
+    with open(adapter_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    pat_double_decode = (
+        r'(iget-object v2, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout\$PictureEffectSpecialBaseMenuAdapter;->mService:Lcom/sony/imaging/app/base/menu/BaseMenuService;\s*'
+        r'invoke-virtual \{v2, v1\}, Lcom/sony/imaging/app/base/menu/BaseMenuService;->getMenuItemDrawable\(Ljava/lang/String;\)Landroid/graphics/drawable/Drawable;\s*(?:\.line \d+\s*)?)'
+        r'(iget-object v2, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout\$PictureEffectSpecialBaseMenuAdapter;->mService:Lcom/sony/imaging/app/base/menu/BaseMenuService;\s*'
+        r'invoke-virtual \{v2, v1\}, Lcom/sony/imaging/app/base/menu/BaseMenuService;->getMenuItemDrawable\(Ljava/lang/String;\)Landroid/graphics/drawable/Drawable;\s*move-result-object v0)'
+    )
+    content, c_dec = re.subn(pat_double_decode, r'\2', content, count=1)
+    record_patch_status(c_dec > 0, "PictureEffectSpecialBaseMenuAdapter.smali: remove double getMenuItemDrawable() call")
+
+    with open(adapter_path, 'w', encoding='utf-8') as f:
         f.write(content)
 
 def patch_ee_state_smali(ee_state_path):
@@ -765,39 +888,6 @@ def patch_executor_creator_smali(ec_path):
     with open(ec_path, 'w', encoding='utf-8') as f:
         f.write(content)
 
-def patch_page_menu_layout_smali(pml_path):
-    print(f"Patching {pml_path}...")
-    with open(pml_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    target = """    :cond_8
-    move-object p1, v0"""
-
-    repl = """    :cond_8
-    invoke-static {v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->isRicohPreset(Ljava/lang/String;)Z
-
-    move-result v3
-
-    if-eqz v3, :cond_ricoh_pml_orig
-
-    const-string p1, "ApplicationTop"
-
-    goto :goto_0
-
-    :cond_ricoh_pml_orig
-    move-object p1, v0"""
-
-    if target in content and "cond_ricoh_pml_orig" not in content:
-        content = content.replace(target, repl, 1)
-        print("Successfully patched PictureEffectPlusPageMenuLayout.smali: route ApplicationSettings to ApplicationTop for Ricoh presets")
-    elif "cond_ricoh_pml_orig" in content:
-        print("PictureEffectPlusPageMenuLayout.smali already hooked.")
-    else:
-        print("Warning: target :cond_8 not found in PictureEffectPlusPageMenuLayout.smali")
-
-    with open(pml_path, 'w', encoding='utf-8') as f:
-        f.write(content)
-
 def patch_menu_icons(work_dir):
     print("Patching menu icons from src/icons/...")
     src_icons_dir = os.path.join(PROJECT_ROOT, 'src', 'icons')
@@ -951,6 +1041,57 @@ def patch_app_name_smali(app_smali_path):
     # Q2: Preserving user's last selected preset on cold boot (no force reset to pop-color)
     print("Cold boot preset preservation active: Camera will remember last used Ricoh preset.")
 
+def patch_app_log_smali(applog_path):
+    """Silence high-frequency debug/trace AppLog helpers and Exception stack walks while preserving error/warning."""
+    print(f"Patching {applog_path}...")
+    with open(applog_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    content, c_flag = re.subn(
+        r'\.field public static final ENABLE_LOG_DEBUG:Z\s*=\s*(?:true|false)',
+        '.field public static final ENABLE_LOG_DEBUG:Z = false',
+        content,
+        count=1,
+    )
+    record_patch_status(c_flag > 0, "AppLog.smali: ENABLE_LOG_DEBUG = false")
+
+    noop_void_methods = ("checkIf", "enter", "exit", "info", "trace")
+    for method_name in noop_void_methods:
+        pat = rf'\.method public static (?:final )?{method_name}\(Ljava/lang/String;Ljava/lang/String;\)V[\s\S]*?\.end method'
+        repl = (
+            f'.method public static final {method_name}(Ljava/lang/String;Ljava/lang/String;)V\n'
+            f'    .locals 0\n\n'
+            f'    return-void\n'
+            f'.end method'
+        )
+        content, count = re.subn(pat, repl, content, count=1)
+        record_patch_status(count > 0, f"AppLog.smali: silence {method_name}()")
+
+    pat_method_name = r'\.method public static getMethodName\(\)Ljava/lang/String;[\s\S]*?\.end method'
+    repl_method_name = (
+        '.method public static getMethodName()Ljava/lang/String;\n'
+        '    .locals 1\n\n'
+        '    const-string v0, ""\n\n'
+        '    return-object v0\n'
+        '.end method'
+    )
+    content, c_mname = re.subn(pat_method_name, repl_method_name, content, count=1)
+    record_patch_status(c_mname > 0, "AppLog.smali: remove stack trace from getMethodName()")
+
+    pat_class_name = r'\.method public static getClassName\(\)Ljava/lang/String;[\s\S]*?\.end method'
+    repl_class_name = (
+        '.method public static getClassName()Ljava/lang/String;\n'
+        '    .locals 1\n\n'
+        '    const-string v0, "PE+"\n\n'
+        '    return-object v0\n'
+        '.end method'
+    )
+    content, c_cname = re.subn(pat_class_name, repl_class_name, content, count=1)
+    record_patch_status(c_cname > 0, "AppLog.smali: remove stack trace from getClassName()")
+
+    with open(applog_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
 def patch_picture_quality_smali(pqc_path):
     print(f"Patching {pqc_path}...")
     with open(pqc_path, 'r', encoding='utf-8') as f:
@@ -1092,9 +1233,11 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         if os.path.exists(layout_smali):
             patch_option_menu_layout_smali(layout_smali)
 
-        pml_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'layout', 'PictureEffectPlusPageMenuLayout.smali')
-        if os.path.exists(pml_smali):
-            patch_page_menu_layout_smali(pml_smali)
+        adapter_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'layout', 'PictureEffectPlusOptionMenuLayout$PictureEffectSpecialBaseMenuAdapter.smali')
+        if os.path.exists(adapter_smali):
+            patch_option_menu_adapter_smali(adapter_smali)
+        else:
+            record_patch_status(False, "PictureEffectSpecialBaseMenuAdapter.smali file not found")
 
         ee_state_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'PictureEffectEEState.smali')
         if os.path.exists(ee_state_smali):
@@ -1117,6 +1260,12 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         app_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'PictureEffectPlus.smali')
         if os.path.exists(app_smali):
             patch_app_name_smali(app_smali)
+
+        applog_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'AppLog.smali')
+        if os.path.exists(applog_smali):
+            patch_app_log_smali(applog_smali)
+        else:
+            record_patch_status(False, "AppLog.smali file not found")
 
         app_root_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'fw', 'AppRoot.smali')
         if os.path.exists(app_root_smali):

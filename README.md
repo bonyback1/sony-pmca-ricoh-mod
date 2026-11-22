@@ -10,8 +10,8 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v2.0.0--B3.0-orange?style=flat-square" alt="Version">
-  <img src="https://img.shields.io/badge/Testbench-27%2F27%20PASS%20(5--Tier)-brightgreen?style=flat-square" alt="Testbench">
+  <img src="https://img.shields.io/badge/Version-v2.1.0--B3.1-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Testbench-29%2F29%20PASS%20(5--Tier)-brightgreen?style=flat-square" alt="Testbench">
 </p>
 
 Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into a native-level **"Ricoh Camera"** through low-level hardware ISP hook and reverse engineering. By directly programming the **pre-ISP hardware White Balance shifts (LB/CC), 1024-point non-linear Gamma tone curves (with baked EV compensation), and row-sum normalized 3×3 RGB color matrices** into camera hardware registers, it faithfully reproduces the signature Ricoh GR split toning and filmic weight—delivering **zero shutter lag, artifact-free real-time EVF/LCD preview, and native high-speed continuous burst shooting**.
@@ -22,7 +22,11 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
 
 - 🛡️ **BIONZ X ISP Hardware State Sanitization & Zero B&W Lock**:
   - Permanently resolves the BIONZ X ISP monochrome lock hazard: actively clears Partial Color extraction registers via `setColorSelectMode("off", sEmptyIntArray)` and explicitly restores the hardware 3×3 Identity Matrix (`sIdentityMatrix`) upon filter switching and application exit.
-  - Automatically forces `sIsRicohActive = true` on `onTerminateHook` to guarantee absolute hardware state cleanup, validated by an automated **5-Tier verification testbench with 27/27 checks PASS (100%)**.
+  - Automatically forces `sIsRicohActive = true` on `onTerminateHook` to guarantee absolute hardware state cleanup, validated by an automated **5-Tier verification testbench with 29/29 checks PASS (100%)**.
+
+- 👁️ **Live Viewfinder Preview Menu & Zero-Flicker HAL Pipeline**:
+  - Replaces opaque static sample PNGs in the preset menu with real-time live-view EVF/LCD preview (`setupLivePreviewMenu`), featuring translucent guide strips and icon rail contrast overlay.
+  - Fast-path HAL/DMA deduplication (`sAppliedPreset` / `sAppliedCameraHash`), `Locale` caching, `AppLog` trace silencing, and single-decode menu adapters eliminate redundant IPC/bitmap overhead.
 
 - 🔄 **User Camera State Isolation & Faithful Restoration**:
   - Automatically captures and backs up the user's pre-existing Creative Style (`ColorMode`, `Contrast`, `Saturation`, `Sharpness`), Dynamic Range Optimizer (`DRO`), High Dynamic Range (`HDR`), and White Balance (`LB`/`CC` shifts) from live `CameraSetting.getParameters()`.

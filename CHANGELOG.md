@@ -11,6 +11,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-11-22 (B3.1)
+
+### Added & Enhanced (Live Viewfinder Preview Menu, Matrix Refinement, HAL Deduplication & Performance)
+- **Live Viewfinder Preview Menu (`RicohHook.setupLivePreviewMenu`)**:
+  - Removed the opaque black menu backdrop and disabled static sample PNG loading (`getBackgroundDrawable` / `setBackgroundResource`), exposing the live hardware EE viewfinder directly behind the preset selector.
+  - Added compact translucent (`40%` black) guide strip and dark icon rail contrast backing for clear legibility over bright scenes.
+  - Replaced `PictureEffectPlusPageMenuLayout` routing with clean removal of the permanently disabled `ApplicationSettings` item from `MenuData.xml`.
+- **Calibrated Film Color Matrices & ISP Simulator Sync**:
+  - Refined **Positive Film** 3×3 hardware matrix (`[991, 203, -170, -21, 1059, -14, 48, 260, 716]`) and **Negative Film** 3×3 hardware matrix (`[848, -54, 230, 169, 641, 214, 66, 278, 680]`).
+  - Synced `tools/color_bench/core/isp_simulator.py` `watercolor` preset to **Leica Steve McCurry Kodachrome** (`[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`, `LB=0, CC=0`).
+- **HAL Deduplication, Split Style Flags & Locale Caching**:
+  - Added fast-path deduplication (`sAppliedPreset`, `sAppliedCameraHash`) in `RicohHook.applyHook()` to skip redundant HAL/DMA commits when re-applying the active preset on the same `CameraEx` instance; cleared cleanly in `resetHook()`.
+  - Split user state backup flags into granular guards (`sHasSavedOriginalColorMode`, `sHasSavedOriginalTone`, `sHasSavedOriginalDRO`, `sHasSavedOriginalHDR`), eliminating monolithic try/catch fallback hazards and removing the `"standard"` overwrite fallback.
+  - Cached `Locale` reference in `getLanguageType()` (`sCachedLocale`, `sCachedLangType`).
+- **UI Responsiveness, Menu Ergonomics & Logging Optimization**:
+  - Replaced `pushedMenuKey()` in `PictureEffectPlusOptionMenuLayout.smali` with a null-safe single-commit implementation (null-guards `mPreviousSelectedeffect`, avoids double `setValue()` on cancel, and calls `closeLayout()` cleanly).
+  - Added Main Dial scrolling (`turnedMainDialNext()` / `turnedMainDialPrev()`), removed redundant double `getMenuItemDrawable()` decoding in `PictureEffectSpecialBaseMenuAdapter`, and removed duplicate `mItemNameView.setText()` calls.
+  - Silenced high-frequency `AppLog` trace/debug methods (`ENABLE_LOG_DEBUG = false`, no-op `checkIf`/`enter`/`exit`/`info`/`trace`) and removed expensive exception stack walks from `getMethodName()` / `getClassName()`.
+- **Automated 5-Tier Verification Testbench Expanded to 29/29 PASS**:
+  - Added `check_applog_silenced` and `check_ricoh_hook_p0_hardening` to Tier 5 (`tools/testbench/test_patched_apk.py`), plus granular split-flag and dedup cache checks in Tier 2 (`tools/testbench/test_pmca_symbols.py`).
+
 ## [2.0.0] - 2026-10-25 (B3.0)
 
 ### Added & Enhanced (User State Preservation, Drive Mode Immunity, RAW Uninhibition & 5-Tier Verification)

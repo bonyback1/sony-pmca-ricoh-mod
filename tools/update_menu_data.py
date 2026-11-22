@@ -122,6 +122,14 @@ def update_menu_data(menu_file):
     else:
         print("Warning: setPictureStorageFormat Layer1 not found in MenuData.xml")
 
+    # 4. Remove dead ApplicationSettings Layer1 from Page1 (permanently greyed out by AppSettingController for all 5 preset IDs)
+    pat_app_settings = r'\s*<Layer1\b[^>]*ItemId="ApplicationSettings"[^>]*(?:/>|>[\s\S]*?</Layer1>)'
+    content, c_as = re.subn(pat_app_settings, '', content, count=1)
+    if c_as > 0:
+        print("Removed permanently disabled ApplicationSettings item from MenuData.xml Page1")
+    else:
+        print("Notice: ApplicationSettings item already absent from MenuData.xml")
+
     with open(menu_file, 'w', encoding='utf-8') as f:
         f.write(content)
 

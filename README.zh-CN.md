@@ -10,8 +10,8 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v2.0.0--B3.0-orange?style=flat-square" alt="Version">
-  <img src="https://img.shields.io/badge/Testbench-27%2F27%20PASS%20(5--Tier)-brightgreen?style=flat-square" alt="Testbench">
+  <img src="https://img.shields.io/badge/Version-v2.1.0--B3.1-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Testbench-29%2F29%20PASS%20(5--Tier)-brightgreen?style=flat-square" alt="Testbench">
 </p>
 
 通过底层硬件 ISP Hook 逆向技术，将索尼官方「照片效果+ (Picture Effect+)」应用深度改造为原生级**「理光相机」**。直接将理光 GR 经典胶片色彩的 **前置硬件白平衡偏置 (WB Shift)、1024 阶非线性 Gamma 曲线 (内嵌 EV 补偿) 与 3×3 RGB 颜色矩阵** 协同写入相机底层硬件寄存器，重现理光 GR 经典的高低光分色 (Split Toning) 与胶片色彩厚重感，实现**零快门延迟、EVF/LCD 实时取景无拖影、原生高速连拍**的直出胶片体验。
@@ -22,7 +22,11 @@
 
 - 🛡️ **BIONZ X ISP 硬件寄存器彻底清洗与杜绝黑白锁定**:
   - 彻底终结索尼相机在退出或切换黑白滤镜时偶发残留黑白/部分色彩的顽疾：在滤镜切换与应用退出时主动清除 `setColorSelectMode("off", sEmptyIntArray)` 部分色彩寄存器，并显式向 ISP 灌入纯正 3×3 单位矩阵 (`sIdentityMatrix`)；
-  - 在 `onTerminateHook` 中强制激活硬件色彩复位，配套**五阶自动化测试工作台 27/27 项全通 (100% PASS)**。
+  - 在 `onTerminateHook` 中强制激活硬件色彩复位，配套**五阶自动化测试工作台 29/29 项全通 (100% PASS)**。
+
+- 👁️ **实时取景预览菜单与零闪烁 HAL 管线**:
+  - 彻底移除菜单中的不透明静态样张 PNG，通过 `setupLivePreviewMenu` 实现取景器/屏幕**实时胶片滤镜预览**，搭配半透明指南条与高对比左侧图标轨道；
+  - 新增 `sAppliedPreset` / `sAppliedCameraHash` 硬件状态去重缓存、`Locale` 缓存、高频率 `AppLog` 静默以及单次图标解码优化，大幅降低菜单切换与预览延迟。
 
 - 🔄 **用户机身参数隔离备份与无损忠实还原**:
   - 首次应用滤镜时从实时 `CameraSetting.getParameters()` 捕获并备份用户原有的创意风格 (`ColorMode`)、对比度 (`Contrast`)、饱和度 (`Saturation`)、锐度 (`Sharpness`)、动态范围优化 (`DRO`)、高动态范围 (`HDR`) 以及白平衡偏置 (`LB`/`CC`)；

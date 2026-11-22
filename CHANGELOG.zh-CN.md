@@ -11,6 +11,27 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并严格遵循 [语义化版本规范 (SemVer)](https://semver.org/lang/zh-CN/)。
 
+## [2.1.0] - 2026-11-22 (B3.1)
+
+### 新增与增强 (实时取景预览菜单、色彩矩阵精调、HAL 去重加速与性能审计升级)
+- **实时取景预览菜单 (`RicohHook.setupLivePreviewMenu`)**:
+  - 移除菜单不透明黑色背景并跳过静态样张 PNG 加载 (`getBackgroundDrawable` / `setBackgroundResource`)，直接透过菜单底层透视硬件实时取景画面；
+  - 为说明栏与左侧图标列表注入 40% 半透明黑底条与暗色轨道，在强光场景下依然保持清晰文字对比度；
+  - 从 `MenuData.xml` 中彻底移除永久禁用的 `ApplicationSettings` 死项。
+- **精调理光胶片色彩矩阵 & ISP 模拟器同步**:
+  - 精调 **理光正片 (Positive Film)** 3×3 硬件色彩矩阵 (`[991, 203, -170, -21, 1059, -14, 48, 260, 716]`) 与 **理光负片 (Negative Film)** 矩阵 (`[848, -54, 230, 169, 641, 214, 66, 278, 680]`)；
+  - 同步 `tools/color_bench/core/isp_simulator.py` 第五预设位配置至 **徕卡麦凯瑞 Kodachrome** (`[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`，`LB=0, CC=0`)。
+- **HAL 状态去重加速、独立参数备份标志与 Locale 缓存**:
+  - 在 `RicohHook.applyHook()` 中新增快速去重路径 (`sAppliedPreset`, `sAppliedCameraHash`)，当同一 `CameraEx` 实例重复应用相同预设时直接跳过冗余 HAL/DMA 写入；在 `resetHook()` 中精准清理；
+  - 将机身参数备份标志拆分为 4 个独立粒度守卫 (`sHasSavedOriginalColorMode`, `sHasSavedOriginalTone`, `sHasSavedOriginalDRO`, `sHasSavedOriginalHDR`)，彻底消除整块 try/catch 回退与 `"standard"` 误覆盖风险；
+  - 在 `getLanguageType()` 中缓存 `Locale` 对象 (`sCachedLocale`, `sCachedLangType`)，避免高频字符串比较开销。
+- **UI 响应速度、按键逻辑与日志静默优化**:
+  - 重构 `PictureEffectPlusOptionMenuLayout.smali` 的 `pushedMenuKey()` 为单次提交安全实现（空值保护 `mPreviousSelectedeffect`，取消时不重复调用 `setValue()` 并干净执行 `closeLayout()`）；
+  - 新增主拨盘滚动支持 (`turnedMainDialNext()` / `turnedMainDialPrev()`)，消除 `PictureEffectSpecialBaseMenuAdapter` 中重复的双次 `getMenuItemDrawable()` 解码及重复的 `mItemNameView.setText()` 调用；
+  - 静默高频 `AppLog` 调试追踪方法 (`ENABLE_LOG_DEBUG = false`，置空 `checkIf`/`enter`/`exit`/`info`/`trace`) 并移除 `getMethodName()` / `getClassName()` 中的异常栈回溯开销。
+- **五阶自动化测试工作台扩充至 29/29 项全通**:
+  - Tier 5 (`tools/testbench/test_patched_apk.py`) 新增 `check_applog_silenced` 与 `check_ricoh_hook_p0_hardening` 检查；Tier 2 (`tools/testbench/test_pmca_symbols.py`) 新增独立备份标志与去重缓存审计。
+
 ## [2.0.0] - 2026-10-25 (B3.0)
 
 ### 新增与增强 (机身状态无损还原、驱动模式原生保护、RAW 限制终结与五阶测试套件)

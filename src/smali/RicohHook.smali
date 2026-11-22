@@ -6,17 +6,24 @@
 .field private static final TAG:Ljava/lang/String; = "RicohHook"
 
 .field private static sIsRicohActive:Z
+.field private static sAppliedPreset:Ljava/lang/String;
+.field private static sAppliedCameraHash:I
+.field private static sCachedLocale:Ljava/util/Locale;
+.field private static sCachedLangType:I
 .field private static sOriginalLB:I
 .field private static sOriginalCC:I
 .field private static sHasSavedOriginalWB:Z
 
 .field private static sOriginalColorMode:Ljava/lang/String;
+.field private static sHasSavedOriginalColorMode:Z
 .field private static sOriginalContrast:I
 .field private static sOriginalSaturation:I
 .field private static sOriginalSharpness:I
+.field private static sHasSavedOriginalTone:Z
 .field private static sOriginalDRO:Ljava/lang/String;
+.field private static sHasSavedOriginalDRO:Z
 .field private static sOriginalHDR:Ljava/lang/String;
-.field private static sHasSavedOriginalStyle:Z
+.field private static sHasSavedOriginalHDR:Z
 
 .field private static sGammaPos:[B
 .field private static sGammaNeg:[B
@@ -39,17 +46,24 @@
 
     const/4 v0, 0x0
     sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedPreset:Ljava/lang/String;
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedCameraHash:I
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCachedLocale:Ljava/util/Locale;
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCachedLangType:I
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
     sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
 
     sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalColorMode:Ljava/lang/String;
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalColorMode:Z
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalContrast:I
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSaturation:I
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSharpness:I
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalTone:Z
     sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalDRO:Ljava/lang/String;
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalDRO:Z
     sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalHDR:Ljava/lang/String;
-    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalHDR:Z
 
     new-array v1, v0, [I
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sEmptyIntArray:[I
@@ -63,12 +77,12 @@
 
     const/16 v0, 0x9
 
-    # 1. Positive Film Matrix (1148, -84, -40, -36, 1118, -58, -24, -68, 1116)
+    # 1. Positive Film Matrix (991, 203, -170, -21, 1059, -14, 48, 260, 716)
     new-array v1, v0, [I
     fill-array-data v1, :array_pos_matrix
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sPositiveFilmMatrix:[I
 
-    # 2. Negative Film Matrix (1046, -16, -6, -26, 1026, 24, -36, -16, 1076)
+    # 2. Negative Film Matrix (848, -54, 230, 169, 641, 214, 66, 278, 680)
     new-array v1, v0, [I
     fill-array-data v1, :array_neg_matrix
     sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sNegativeFilmMatrix:[I
@@ -1151,6 +1165,32 @@
     return v0
 
     :cond_0
+    # Fast-path deduplication: skip redundant HAL/DMA commits if same preset is already active on same CameraEx
+    sget-boolean v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
+    if-eqz v1, :cond_not_cached
+
+    sget-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedPreset:Ljava/lang/String;
+    if-eqz v1, :cond_not_cached
+
+    invoke-virtual {v1, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v1
+    if-eqz v1, :cond_not_cached
+
+    invoke-static {p0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getCameraEx(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)Lcom/sony/scalar/hardware/CameraEx;
+    move-result-object v1
+    if-eqz v1, :cond_not_cached
+
+    sget v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedCameraHash:I
+    if-eqz v2, :cond_not_cached
+
+    invoke-static {v1}, Ljava/lang/System;->identityHashCode(Ljava/lang/Object;)I
+    move-result v1
+    if-ne v1, v2, :cond_not_cached
+
+    const/4 v0, 0x1
+    return v0
+
+    :cond_not_cached
     # Safe logging
     new-instance v1, Ljava/lang/StringBuilder;
     invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
@@ -1200,22 +1240,51 @@
     move-exception v4
 
     :goto_csm_apply_done
-    # Backup original user Creative Style, DRO & HDR on first apply
-    sget-boolean v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
-    if-nez v4, :cond_style_saved
-
-    :try_start_style_get
+    # Fetch live ParametersModifier once, then back up each group in an independent try/catch
+    const/4 v4, 0x0
+    :try_start_live_params
     invoke-virtual {v1}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->getParameters()Landroid/util/Pair;
-    move-result-object v4
-    if-eqz v4, :cond_style_saved
-    iget-object v4, v4, Landroid/util/Pair;->second:Ljava/lang/Object;
-    check-cast v4, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;
-    if-eqz v4, :cond_style_saved
+    move-result-object v5
+    if-eqz v5, :goto_live_params_done
 
+    iget-object v5, v5, Landroid/util/Pair;->second:Ljava/lang/Object;
+    check-cast v5, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;
+    move-object v4, v5
+    :try_end_live_params
+    .catch Ljava/lang/Throwable; {:try_start_live_params .. :try_end_live_params} :catch_live_params
+    goto :goto_live_params_done
+
+    :catch_live_params
+    move-exception v5
+    const/4 v4, 0x0
+
+    :goto_live_params_done
+    if-eqz v4, :cond_backups_done
+
+    # 1a. Backup Creative Style ColorMode
+    sget-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalColorMode:Z
+    if-nez v5, :cond_bk_cm_done
+
+    :try_start_bk_cm
     invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getColorMode()Ljava/lang/String;
     move-result-object v5
     sput-object v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalColorMode:Ljava/lang/String;
+    const/4 v5, 0x1
+    sput-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalColorMode:Z
+    :try_end_bk_cm
+    .catch Ljava/lang/Throwable; {:try_start_bk_cm .. :try_end_bk_cm} :catch_bk_cm
+    goto :goto_bk_cm_done
 
+    :catch_bk_cm
+    move-exception v5
+
+    :cond_bk_cm_done
+    :goto_bk_cm_done
+    # 1b. Backup Contrast, Saturation, Sharpness
+    sget-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalTone:Z
+    if-nez v5, :cond_bk_tone_done
+
+    :try_start_bk_tone
     invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getContrast()I
     move-result v5
     sput v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalContrast:I
@@ -1228,57 +1297,60 @@
     move-result v5
     sput v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSharpness:I
 
+    const/4 v5, 0x1
+    sput-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalTone:Z
+    :try_end_bk_tone
+    .catch Ljava/lang/Throwable; {:try_start_bk_tone .. :try_end_bk_tone} :catch_bk_tone
+    goto :goto_bk_tone_done
+
+    :catch_bk_tone
+    move-exception v5
+
+    :cond_bk_tone_done
+    :goto_bk_tone_done
+    # 1c. Backup DRO Mode
+    sget-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalDRO:Z
+    if-nez v5, :cond_bk_dro_done
+
+    :try_start_bk_dro
     invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getDROMode()Ljava/lang/String;
     move-result-object v5
     sput-object v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalDRO:Ljava/lang/String;
+    const/4 v5, 0x1
+    sput-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalDRO:Z
+    :try_end_bk_dro
+    .catch Ljava/lang/Throwable; {:try_start_bk_dro .. :try_end_bk_dro} :catch_bk_dro
+    goto :goto_bk_dro_done
 
+    :catch_bk_dro
+    move-exception v5
+
+    :cond_bk_dro_done
+    :goto_bk_dro_done
+    # 1d. Backup HDR Mode
+    sget-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalHDR:Z
+    if-nez v5, :cond_bk_hdr_done
+
+    :try_start_bk_hdr
     invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getHDRMode()Ljava/lang/String;
     move-result-object v5
     sput-object v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalHDR:Ljava/lang/String;
+    const/4 v5, 0x1
+    sput-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalHDR:Z
+    :try_end_bk_hdr
+    .catch Ljava/lang/Throwable; {:try_start_bk_hdr .. :try_end_bk_hdr} :catch_bk_hdr
+    goto :goto_bk_hdr_done
 
-    const/4 v4, 0x1
-    sput-boolean v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
-    :try_end_style_get
-    .catch Ljava/lang/Throwable; {:try_start_style_get .. :try_end_style_get} :catch_style_get
+    :catch_bk_hdr
+    move-exception v5
 
-    :cond_style_saved
-    :goto_style_saved_done
-    const/4 v4, 0x0
-    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
-    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
-    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
+    :cond_bk_hdr_done
+    :goto_bk_hdr_done
+    # 1e. Backup original user WB shifts
+    sget-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
+    if-nez v5, :cond_bk_wb_done
 
-    # Fragile HAL methods: setColorMode, setDROMode, setHDRMode
-    :try_start_hal_opts
-    const-string v4, "standard"
-    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorMode(Ljava/lang/String;)V
-
-    const-string v4, "off"
-    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setDROMode(Ljava/lang/String;)V
-    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setHDRMode(Ljava/lang/String;)V
-    :try_end_hal_opts
-    .catch Ljava/lang/Throwable; {:try_start_hal_opts .. :try_end_hal_opts} :catch_hal_opts
-    goto :goto_hal_opts_done
-
-    :catch_hal_opts
-    move-exception v4
-    const-string v4, "RicohHook"
-    const-string v5, "setColorMode/DRO/HDR not supported on this model"
-    invoke-static {v4, v5}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;)I
-
-    :goto_hal_opts_done
-    # Backup original user WB shifts on first apply
-    sget-boolean v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
-    if-nez v4, :cond_wb_saved
-
-    :try_start_wb_get
-    invoke-virtual {v1}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->getParameters()Landroid/util/Pair;
-    move-result-object v4
-    if-eqz v4, :cond_wb_saved
-    iget-object v4, v4, Landroid/util/Pair;->second:Ljava/lang/Object;
-    check-cast v4, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;
-    if-eqz v4, :cond_wb_saved
-
+    :try_start_bk_wb
     invoke-virtual {v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->getLightBalanceForWhiteBalance()I
     move-result v5
     sput v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
@@ -1287,13 +1359,66 @@
     move-result v5
     sput v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
 
-    const/4 v4, 0x1
-    sput-boolean v4, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
-    :try_end_wb_get
-    .catch Ljava/lang/Throwable; {:try_start_wb_get .. :try_end_wb_get} :catch_wb_get
+    const/4 v5, 0x1
+    sput-boolean v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
+    :try_end_bk_wb
+    .catch Ljava/lang/Throwable; {:try_start_bk_wb .. :try_end_bk_wb} :catch_bk_wb
+    goto :goto_bk_wb_done
 
-    :cond_wb_saved
-    :goto_wb_apply
+    :catch_bk_wb
+    move-exception v5
+
+    :cond_bk_wb_done
+    :goto_bk_wb_done
+    :cond_backups_done
+
+    # Neutralize Tone, ColorMode, DRO, HDR independently on target modifier v2
+    :try_start_tone_set
+    const/4 v4, 0x0
+    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
+    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
+    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
+    :try_end_tone_set
+    .catch Ljava/lang/Throwable; {:try_start_tone_set .. :try_end_tone_set} :catch_tone_set
+    goto :goto_tone_set_done
+
+    :catch_tone_set
+    move-exception v4
+
+    :goto_tone_set_done
+    :try_start_cm_set
+    const-string v4, "standard"
+    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorMode(Ljava/lang/String;)V
+    :try_end_cm_set
+    .catch Ljava/lang/Throwable; {:try_start_cm_set .. :try_end_cm_set} :catch_cm_set
+    goto :goto_cm_set_done
+
+    :catch_cm_set
+    move-exception v4
+
+    :goto_cm_set_done
+    :try_start_dro_set
+    const-string v4, "off"
+    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setDROMode(Ljava/lang/String;)V
+    :try_end_dro_set
+    .catch Ljava/lang/Throwable; {:try_start_dro_set .. :try_end_dro_set} :catch_dro_set
+    goto :goto_dro_set_done
+
+    :catch_dro_set
+    move-exception v4
+
+    :goto_dro_set_done
+    :try_start_hdr_set
+    const-string v4, "off"
+    invoke-virtual {v2, v4}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setHDRMode(Ljava/lang/String;)V
+    :try_end_hdr_set
+    .catch Ljava/lang/Throwable; {:try_start_hdr_set .. :try_end_hdr_set} :catch_hdr_set
+    goto :goto_hdr_set_done
+
+    :catch_hdr_set
+    move-exception v4
+
+    :goto_hdr_set_done
     # Apply preset-specific hardware WB shifts
     :try_start_wb_set
     invoke-static {p2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getWhitebalanceShiftLB(Ljava/lang/String;)I
@@ -1307,14 +1432,6 @@
     .catch Ljava/lang/Throwable; {:try_start_wb_set .. :try_end_wb_set} :catch_wb_set
 
     goto :goto_matrix
-
-    :catch_style_get
-    move-exception v4
-    goto :goto_style_saved_done
-
-    :catch_wb_get
-    move-exception v4
-    goto :goto_wb_apply
 
     :catch_wb_set
     move-exception v4
@@ -1406,6 +1523,20 @@
     invoke-static {v4, v5}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;)I
 
     :goto_gamma_all_done
+    if-eqz v2, :cond_cache_clear
+
+    invoke-static {v2}, Ljava/lang/System;->identityHashCode(Ljava/lang/Object;)I
+    move-result v3
+    sput v3, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedCameraHash:I
+    sput-object p2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedPreset:Ljava/lang/String;
+    goto :goto_cache_done
+
+    :cond_cache_clear
+    const/4 v3, 0x0
+    sput-object v3, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedPreset:Ljava/lang/String;
+    sput v3, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedCameraHash:I
+
+    :goto_cache_done
     const/4 v2, 0x1
     sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
     const-string v2, "RicohHook"
@@ -1429,6 +1560,10 @@
             ")V"
         }
     .end annotation
+
+    const/4 v0, 0x0
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedPreset:Ljava/lang/String;
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedCameraHash:I
 
     sget-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
     if-nez v0, :cond_0
@@ -1486,15 +1621,32 @@
     .catch Ljava/lang/Throwable; {:try_start_res_mat .. :try_end_res_mat} :catch_res_mat
 
     :goto_res_mat_done
-    sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
-    if-eqz v2, :cond_style_fallback
+    # Restore only the settings that applyHook() actually backed up (never force "standard" 0,0,0)
+    sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalColorMode:Z
+    if-eqz v2, :cond_res_cm_done
 
-    :try_start_style_res
+    :try_start_res_cm
     sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalColorMode:Ljava/lang/String;
-    if-eqz v2, :cond_res_cm_skip
+    if-eqz v2, :cond_res_cm_clear
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorMode(Ljava/lang/String;)V
-    :cond_res_cm_skip
+    :try_end_res_cm
+    .catch Ljava/lang/Throwable; {:try_start_res_cm .. :try_end_res_cm} :catch_res_cm
 
+    :cond_res_cm_clear
+    :goto_res_cm_clear
+    const/4 v2, 0x0
+    sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalColorMode:Z
+    goto :cond_res_cm_done
+
+    :catch_res_cm
+    move-exception v2
+    goto :goto_res_cm_clear
+
+    :cond_res_cm_done
+    sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalTone:Z
+    if-eqz v2, :cond_res_tone_done
+
+    :try_start_res_tone
     sget v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalContrast:I
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
 
@@ -1503,38 +1655,61 @@
 
     sget v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalSharpness:I
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
+    :try_end_res_tone
+    .catch Ljava/lang/Throwable; {:try_start_res_tone .. :try_end_res_tone} :catch_res_tone
 
+    :goto_res_tone_clear
+    const/4 v2, 0x0
+    sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalTone:Z
+    goto :cond_res_tone_done
+
+    :catch_res_tone
+    move-exception v2
+    goto :goto_res_tone_clear
+
+    :cond_res_tone_done
+    sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalDRO:Z
+    if-eqz v2, :cond_res_dro_done
+
+    :try_start_res_dro
     sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalDRO:Ljava/lang/String;
-    if-eqz v2, :cond_res_dro_skip
+    if-eqz v2, :cond_res_dro_clear
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setDROMode(Ljava/lang/String;)V
-    :cond_res_dro_skip
+    :try_end_res_dro
+    .catch Ljava/lang/Throwable; {:try_start_res_dro .. :try_end_res_dro} :catch_res_dro
 
+    :cond_res_dro_clear
+    :goto_res_dro_clear
+    const/4 v2, 0x0
+    sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalDRO:Z
+    goto :cond_res_dro_done
+
+    :catch_res_dro
+    move-exception v2
+    goto :goto_res_dro_clear
+
+    :cond_res_dro_done
+    sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalHDR:Z
+    if-eqz v2, :cond_res_hdr_done
+
+    :try_start_res_hdr
     sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalHDR:Ljava/lang/String;
-    if-eqz v2, :cond_res_hdr_skip
+    if-eqz v2, :cond_res_hdr_clear
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setHDRMode(Ljava/lang/String;)V
-    :cond_res_hdr_skip
+    :try_end_res_hdr
+    .catch Ljava/lang/Throwable; {:try_start_res_hdr .. :try_end_res_hdr} :catch_res_hdr
 
+    :cond_res_hdr_clear
+    :goto_res_hdr_clear
     const/4 v2, 0x0
-    sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalStyle:Z
-    :try_end_style_res
-    .catch Ljava/lang/Throwable; {:try_start_style_res .. :try_end_style_res} :catch_style_res
-    goto :goto_style_res_done
+    sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalHDR:Z
+    goto :cond_res_hdr_done
 
-    :cond_style_fallback
-    :try_start_res_mode
-    const-string v2, "standard"
-    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorMode(Ljava/lang/String;)V
-    :try_end_res_mode
-    .catch Ljava/lang/Throwable; {:try_start_res_mode .. :try_end_res_mode} :catch_res_mode
+    :catch_res_hdr
+    move-exception v2
+    goto :goto_res_hdr_clear
 
-    :goto_res_mode_done
-    const/4 v2, 0x0
-    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setContrast(I)V
-    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSaturation(I)V
-    invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setSharpness(I)V
-
-    :goto_style_res_done
-
+    :cond_res_hdr_done
     # Restore original user WB shift
     sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
     if-eqz v2, :cond_wb_reset
@@ -1545,11 +1720,12 @@
 
     sget v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
     invoke-virtual {v1, v2}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorCompensationForWhiteBalance(I)V
-
-    const/4 v2, 0x0
-    sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
     :try_end_wb_res
     .catch Ljava/lang/Throwable; {:try_start_wb_res .. :try_end_wb_res} :catch_wb_res
+
+    :goto_wb_clear
+    const/4 v2, 0x0
+    sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
 
     :cond_wb_reset
     :goto_wb_done
@@ -1572,17 +1748,9 @@
     move-exception v2
     goto :goto_res_mat_done
 
-    :catch_res_mode
-    move-exception v2
-    goto :goto_res_mode_done
-
-    :catch_style_res
-    move-exception v2
-    goto :goto_style_res_done
-
     :catch_wb_res
     move-exception v2
-    goto :goto_wb_done
+    goto :goto_wb_clear
 
     :catch_res_commit
     move-exception v0
@@ -1610,45 +1778,60 @@
     move-result-object v1
     if-eqz v1, :cond_fallback
 
+    sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCachedLocale:Ljava/util/Locale;
+    if-ne v1, v2, :cond_compute_lang
+
+    sget v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCachedLangType:I
+    return v0
+
+    :cond_compute_lang
     invoke-virtual {v1}, Ljava/util/Locale;->getLanguage()Ljava/lang/String;
     move-result-object v2
-    if-eqz v2, :cond_fallback
+    if-eqz v2, :cond_cache_zero
 
     const-string v0, "zh"
     invoke-virtual {v2, v0}, Ljava/lang/String;->startsWith(Ljava/lang/String;)Z
     move-result v0
-    if-eqz v0, :cond_fallback
+    if-eqz v0, :cond_cache_zero
 
     invoke-virtual {v1}, Ljava/util/Locale;->getCountry()Ljava/lang/String;
-    move-result-object v1
-    if-eqz v1, :cond_simp
+    move-result-object v2
+    if-eqz v2, :cond_simp
 
     const-string v0, "TW"
-    invoke-virtual {v1, v0}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
+    invoke-virtual {v2, v0}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
     move-result v0
     if-eqz v0, :cond_chk_hk
     const/4 v0, 0x1
-    return v0
+    goto :cond_store_lang
 
     :cond_chk_hk
     const-string v0, "HK"
-    invoke-virtual {v1, v0}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
+    invoke-virtual {v2, v0}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
     move-result v0
     if-eqz v0, :cond_chk_mo
     const/4 v0, 0x1
-    return v0
+    goto :cond_store_lang
 
     :cond_chk_mo
     const-string v0, "MO"
-    invoke-virtual {v1, v0}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
+    invoke-virtual {v2, v0}, Ljava/lang/String;->equalsIgnoreCase(Ljava/lang/String;)Z
     move-result v0
     if-eqz v0, :cond_simp
     const/4 v0, 0x1
-    return v0
+    goto :cond_store_lang
 
     :cond_simp
     # 2 = Simplified Chinese
     const/4 v0, 0x2
+    goto :cond_store_lang
+
+    :cond_cache_zero
+    const/4 v0, 0x0
+
+    :cond_store_lang
+    sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCachedLocale:Ljava/util/Locale;
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCachedLangType:I
     return v0
 
     :cond_fallback
@@ -1954,4 +2137,94 @@
 
     const/4 v0, 0x1
     return v0
+.end method
+
+.method public static setupLivePreviewMenu(Landroid/view/ViewGroup;Landroid/widget/ImageView;Landroid/widget/TextView;Landroid/widget/TextView;Landroid/view/View;)V
+    .locals 5
+    .param p0, "rootView"    # Landroid/view/ViewGroup;
+    .param p1, "bgImage"    # Landroid/widget/ImageView;
+    .param p2, "itemName"    # Landroid/widget/TextView;
+    .param p3, "guideText"    # Landroid/widget/TextView;
+    .param p4, "listView"    # Landroid/view/View;
+
+    :try_start_live_ui
+    # 1. Remove opaque black root background so hardware EE Live View shows through
+    if-eqz p0, :cond_live_bg
+    const/4 v0, 0x0
+    invoke-virtual {p0, v0}, Landroid/view/ViewGroup;->setBackgroundDrawable(Landroid/graphics/drawable/Drawable;)V
+
+    :cond_live_bg
+    # 2. Hide static sample ImageView (View.GONE = 8) and clear any pooled drawable
+    if-eqz p1, :cond_live_name
+    const/16 v0, 0x8
+    invoke-virtual {p1, v0}, Landroid/widget/ImageView;->setVisibility(I)V
+    const/4 v0, 0x0
+    invoke-virtual {p1, v0}, Landroid/widget/ImageView;->setBackgroundDrawable(Landroid/graphics/drawable/Drawable;)V
+
+    :cond_live_name
+    # 3. Position filter title neatly below the 60px top header bar (x=132..628, y=66..108)
+    if-eqz p2, :cond_live_guide
+    new-instance v0, Landroid/widget/RelativeLayout$LayoutParams;
+    const/16 v1, 0x1f0
+    const/16 v2, 0x2a
+    invoke-direct {v0, v1, v2}, Landroid/widget/RelativeLayout$LayoutParams;-><init>(II)V
+    const/16 v1, 0x84
+    const/16 v2, 0x42
+    const/16 v3, 0xc
+    const/4 v4, 0x0
+    invoke-virtual {v0, v1, v2, v3, v4}, Landroid/widget/RelativeLayout$LayoutParams;->setMargins(IIII)V
+    invoke-virtual {p2, v0}, Landroid/widget/TextView;->setLayoutParams(Landroid/view/ViewGroup$LayoutParams;)V
+    const/16 v1, 0xa
+    const/4 v2, 0x0
+    const/16 v3, 0xa
+    const/4 v4, 0x0
+    invoke-virtual {p2, v1, v2, v3, v4}, Landroid/widget/TextView;->setPadding(IIII)V
+
+    :cond_live_guide
+    # 4. Compact translucent guide strip aligned above the 60px bottom FooterGuide bar
+    #    width=496px (0x1f0), height=WRAP_CONTENT (-2), ALIGN_PARENT_BOTTOM (12),
+    #    margins=(132, 0, 12, 66), maxLines=2, gravity=LEFT|CENTER_VERTICAL (0x13),
+    #    padding=(10, 6, 10, 6), bg=0x66000000 (40% translucent black)
+    if-eqz p3, :cond_live_list
+    new-instance v0, Landroid/widget/RelativeLayout$LayoutParams;
+    const/16 v1, 0x1f0
+    const/4 v2, -0x2
+    invoke-direct {v0, v1, v2}, Landroid/widget/RelativeLayout$LayoutParams;-><init>(II)V
+    const/16 v1, 0xc
+    invoke-virtual {v0, v1}, Landroid/widget/RelativeLayout$LayoutParams;->addRule(I)V
+    const/16 v1, 0x84
+    const/4 v2, 0x0
+    const/16 v3, 0xc
+    const/16 v4, 0x42
+    invoke-virtual {v0, v1, v2, v3, v4}, Landroid/widget/RelativeLayout$LayoutParams;->setMargins(IIII)V
+    invoke-virtual {p3, v0}, Landroid/widget/TextView;->setLayoutParams(Landroid/view/ViewGroup$LayoutParams;)V
+    const/4 v1, 0x2
+    invoke-virtual {p3, v1}, Landroid/widget/TextView;->setMaxLines(I)V
+    const/16 v1, 0x13
+    invoke-virtual {p3, v1}, Landroid/widget/TextView;->setGravity(I)V
+    const/16 v1, 0xa
+    const/4 v2, 0x6
+    const/16 v3, 0xa
+    const/4 v4, 0x6
+    invoke-virtual {p3, v1, v2, v3, v4}, Landroid/widget/TextView;->setPadding(IIII)V
+    const v1, 0x66000000
+    invoke-virtual {p3, v1}, Landroid/widget/TextView;->setBackgroundColor(I)V
+
+    :cond_live_list
+    # 5. Subtle translucent dark rail behind the left 122x330 icon list for bright-scene contrast
+    if-eqz p4, :cond_live_done
+    const v1, 0x66000000
+    invoke-virtual {p4, v1}, Landroid/view/View;->setBackgroundColor(I)V
+
+    :cond_live_done
+    :try_end_live_ui
+    .catch Ljava/lang/Throwable; {:try_start_live_ui .. :try_end_live_ui} :catch_live_ui
+    return-void
+
+    :catch_live_ui
+    move-exception v0
+    const-string v1, "RicohHook"
+    const-string v2, "setupLivePreviewMenu failed"
+    invoke-static {v1, v2, v0}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
+    return-void
 .end method

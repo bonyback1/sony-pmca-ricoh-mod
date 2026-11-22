@@ -56,14 +56,14 @@ PRESETS_CONFIG = {
         'wb': {'lb': 0, 'cc': 0}
     },
     'watercolor': {
-        'name': 'Cross Process (正负逆冲)',
+        'name': 'Leica Steve McCurry Kodachrome (麦凯瑞 Kodachrome)',
         'matrix': np.array([
-            [1141, -69, -48],
-            [8, 1031, -15],
-            [-19, 41, 1002]
+            [1118, -62, -32],
+            [-23, 1070, -23],
+            [-45, -29, 1098]
         ], dtype=np.float64),
         'curve_gen': gen_curve_xpro,
-        'wb': {'lb': -3, 'cc': 2}
+        'wb': {'lb': 0, 'cc': 0}
     }
 }
 

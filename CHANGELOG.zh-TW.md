@@ -11,6 +11,27 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 並嚴格遵循 [語意化版本規範 (SemVer)](https://semver.org/lang/zh-TW/)。
 
+## [2.1.0] - 2026-11-22 (B3.1)
+
+### 新增與增強 (即時取景預覽選單、色彩矩陣精調、HAL 去重加速與效能審計升級)
+- **即時取景預覽選單 (`RicohHook.setupLivePreviewMenu`)**:
+  - 移除選單不透明黑色背景並跳過靜態樣張 PNG 載入 (`getBackgroundDrawable` / `setBackgroundResource`)，直接透過選單底層透視硬體即時取景畫面；
+  - 為說明欄與左側圖示列表注入 40% 半透明黑底條與暗色軌道，在強光場景下依然保持清晰文字對比度；
+  - 從 `MenuData.xml` 中徹底移除永久停用的 `ApplicationSettings` 死項。
+- **精調理光底片色彩矩陣 & ISP 模擬器同步**:
+  - 精調 **理光正片 (Positive Film)** 3×3 硬體色彩矩陣 (`[991, 203, -170, -21, 1059, -14, 48, 260, 716]`) 與 **理光負片 (Negative Film)** 矩陣 (`[848, -54, 230, 169, 641, 214, 66, 278, 680]`)；
+  - 同步 `tools/color_bench/core/isp_simulator.py` 第五預設位配置至 **徠卡麥凱瑞 Kodachrome** (`[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`，`LB=0, CC=0`)。
+- **HAL 狀態去重加速、獨立參數備份旗標與 Locale 快取**:
+  - 在 `RicohHook.applyHook()` 中新增快速去重路徑 (`sAppliedPreset`, `sAppliedCameraHash`)，當同一 `CameraEx` 實例重複套用相同預設時直接跳過冗餘 HAL/DMA 寫入；在 `resetHook()` 中精準清理；
+  - 將機身參數備份旗標拆分為 4 個獨立粒度守衛 (`sHasSavedOriginalColorMode`, `sHasSavedOriginalTone`, `sHasSavedOriginalDRO`, `sHasSavedOriginalHDR`)，徹底消除整塊 try/catch 回退與 `"standard"` 誤覆蓋風險；
+  - 在 `getLanguageType()` 中快取 `Locale` 物件 (`sCachedLocale`, `sCachedLangType`)，避免高頻字串比較開銷。
+- **UI 反應速度、按鍵邏輯與日誌靜默最佳化**:
+  - 重構 `PictureEffectPlusOptionMenuLayout.smali` 的 `pushedMenuKey()` 為單次提交安全實作（空值保護 `mPreviousSelectedeffect`，取消時不重複呼叫 `setValue()` 並乾淨執行 `closeLayout()`）；
+  - 新增主轉盤捲動支援 (`turnedMainDialNext()` / `turnedMainDialPrev()`)，消除 `PictureEffectSpecialBaseMenuAdapter` 中重複的雙次 `getMenuItemDrawable()` 解碼及重複的 `mItemNameView.setText()` 呼叫；
+  - 靜默高頻 `AppLog` 除錯追蹤方法 (`ENABLE_LOG_DEBUG = false`，置空 `checkIf`/`enter`/`exit`/`info`/`trace`) 並移除 `getMethodName()` / `getClassName()` 中的異常堆疊回溯開銷。
+- **五階自動化測試工作台擴充至 29/29 項全通**:
+  - Tier 5 (`tools/testbench/test_patched_apk.py`) 新增 `check_applog_silenced` 與 `check_ricoh_hook_p0_hardening` 檢查；Tier 2 (`tools/testbench/test_pmca_symbols.py`) 新增獨立備份旗標與去重快取審計。
+
 ## [2.0.0] - 2026-10-25 (B3.0)
 
 ### 新增與增強 (機身狀態無損還原、驅動模式原生保護、RAW 限制終結與五階測試套件)

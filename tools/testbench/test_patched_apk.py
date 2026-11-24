@@ -185,9 +185,57 @@ def check_menu_layout_safety(smali_root: str) -> CheckResult:
         if decode_calls != 1:
             violations.append(f"PictureEffectSpecialBaseMenuAdapter calls BaseMenuService.getMenuItemDrawable() {decode_calls} times (expected 1)!")
 
+    # 5. Check C2 Hold-to-Compare hooks across menu layout, shooting key handler, and StableLayout
+    for sig in (
+        "onDeleteKeyPushed(Landroid/view/KeyEvent;)I",
+        "onDeleteKeyReleased(Landroid/view/KeyEvent;)I",
+        "onCustom2KeyPushed(Landroid/view/KeyEvent;)I",
+        "onCustom2KeyReleased(Landroid/view/KeyEvent;)I",
+        "RicohHook;->ensureFilterRestored()V",
+    ):
+        if sig not in content:
+            violations.append(f"PictureEffectPlusOptionMenuLayout.smali missing C2 compare check '{sig}'")
+
+    kh_path = os.path.join(
+        smali_root, "com", "sony", "imaging", "app", "pictureeffectplus", "shooting", "trigger",
+        "PictureEffectPlusS1OffEEStateKeyHandler.smali"
+    )
+    if not os.path.exists(kh_path):
+        violations.append("PictureEffectPlusS1OffEEStateKeyHandler.smali not found")
+    else:
+        with open(kh_path, "r", encoding="utf-8") as kf:
+            kh_body = kf.read()
+        for sig in (
+            "onDeleteKeyPushed(Landroid/view/KeyEvent;)I",
+            "onDeleteKeyReleased(Landroid/view/KeyEvent;)I",
+            "onCustom2KeyPushed(Landroid/view/KeyEvent;)I",
+            "onCustom2KeyReleased(Landroid/view/KeyEvent;)I",
+            "pushedS1Key()I",
+            "RicohHook;->ensureFilterRestored()V",
+        ):
+            if sig not in kh_body:
+                violations.append(f"PictureEffectPlusS1OffEEStateKeyHandler.smali missing '{sig}'")
+
+    stable_path = os.path.join(
+        smali_root, "com", "sony", "imaging", "app", "pictureeffectplus", "shooting", "layout",
+        "PictureEffectPlusStableLayout.smali"
+    )
+    if not os.path.exists(stable_path):
+        violations.append("PictureEffectPlusStableLayout.smali not found")
+    else:
+        with open(stable_path, "r", encoding="utf-8") as sf:
+            stable_body = sf.read()
+        for sig in (
+            "RicohHook;->attachCompareBadge(Landroid/view/ViewGroup;)V",
+            "RicohHook;->detachCompareBadge(Landroid/view/ViewGroup;)V",
+            "RicohHook;->ensureFilterRestored()V",
+        ):
+            if sig not in stable_body:
+                violations.append(f"PictureEffectPlusStableLayout.smali missing '{sig}'")
+
     dur = time.time() - start_time
     passed = len(violations) == 0
-    msg = "Menu layout P1 caching, adapter single-decode, cancel-path & dial overrides verified" if passed else f"{len(violations)} layout safety/perf hazards found"
+    msg = "Menu layout live preview, C2 compare hooks, adapter single-decode, cancel-path & dial overrides verified" if passed else f"{len(violations)} layout safety/perf hazards found"
     return CheckResult("Menu Layout Safety Audit", passed, dur, msg, violations)
 
 
@@ -345,10 +393,18 @@ def check_ricoh_hook_p0_hardening(smali_root: str) -> CheckResult:
         if "sCachedLocale:Ljava/util/Locale;" not in lang_body or "sCachedLangType:I" not in lang_body:
             violations.append("getLanguageType() missing sCachedLocale / sCachedLangType caching!")
 
-    # Live preview UI helper & strict API < 16 View safety
-    live_helper_sig = "setupLivePreviewMenu(Landroid/view/ViewGroup;Landroid/widget/ImageView;Landroid/widget/TextView;Landroid/widget/TextView;Landroid/view/View;)V"
-    if live_helper_sig not in content:
-        violations.append(f"RicohHook.smali missing live preview helper '{live_helper_sig}'")
+    # Live preview UI helper, C2 compare helpers & strict API < 16 View safety
+    for helper_sig in (
+        "setupLivePreviewMenu(Landroid/view/ViewGroup;Landroid/widget/ImageView;Landroid/widget/TextView;Landroid/widget/TextView;Landroid/view/View;)V",
+        "setBypassPreview(Z)V",
+        "ensureFilterRestored()V",
+        "handleShootingCompareKey(Landroid/view/KeyEvent;Z)I",
+        "handleMenuCompareKey(Landroid/view/KeyEvent;ZLandroid/widget/TextView;Ljava/lang/String;)I",
+        "attachCompareBadge(Landroid/view/ViewGroup;)V",
+        "detachCompareBadge(Landroid/view/ViewGroup;)V",
+    ):
+        if helper_sig not in content:
+            violations.append(f"RicohHook.smali missing helper '{helper_sig}'")
     if "->setBackground(Landroid/graphics/drawable/Drawable;)V" in content or "->setAlpha(F)V" in content:
         violations.append("RicohHook.smali uses API 16+ View method (setBackground/setAlpha) that crashes Dalvik on A6300!")
 

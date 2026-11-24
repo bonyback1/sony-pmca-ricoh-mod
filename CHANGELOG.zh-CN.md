@@ -11,6 +11,19 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并严格遵循 [语义化版本规范 (SemVer)](https://semver.org/lang/zh-CN/)。
 
+## [2.2.0] - 2026-11-24 (B3.2)
+
+### 新增与增强 (C2 / 删除键按住实时原片对比 Before/After)
+- **按住对比机身原片 (`RicohHook.setBypassPreview` / `handleShootingCompareKey` / `handleMenuCompareKey`)**:
+  - 在拍摄取景界面 (`PictureEffectPlusS1OffEEStateKeyHandler.smali`) 与实时滤镜菜单 (`PictureEffectPlusOptionMenuLayout.smali`) 中全面接入 **C2 / 删除键** 按住与松开事件 (`onDeleteKeyPushed` / `onDeleteKeyReleased` / `onCustom2KeyPushed` / `onCustom2KeyReleased`)；
+  - 按住时瞬时旁路理光 ISP LUT、色彩矩阵与白平衡偏移，实时在 EVF/屏幕上预览未加滤镜的机身原片画面，方便与胶片模拟效果进行直觉对比。
+- **三语悬浮对比提示徽章 (`PictureEffectPlusStableLayout.smali`)**:
+  - 在 `StableLayout` 生命周期 (`createView()` / `detachView()`) 中挂载 `attachCompareBadge()` / `detachCompareBadge()`，在取景画面顶部居中显示高对比半透明悬浮提示（`"原片对比 (Original)"` / `"原片對比 (Original)"` / `"ORIGINAL (BEFORE)"`），并在菜单预览时同步更新预设标题提示。
+- **防呆自动恢复保护**:
+  - 在 `pushedS1Key()`（半按快门对焦）、`StableLayout.onPause()` 与 `OptionMenuLayout.onPause()` 中强制调用 `RicohHook.ensureFilterRestored()`，确保半按快门、退出菜单或切换模式时瞬时恢复理光滤镜状态。
+- **Tier 5 字节码审计增强**:
+  - 扩充 `tools/testbench/test_patched_apk.py`，全面审计 `StableLayout` 徽章生命周期、双界面 C2/删除键事件、`pushedS1Key()` 恢复守卫及 `RicohHook` 旁路对比逻辑（**29/29 项全绿通过**）。
+
 ## [2.1.0] - 2026-11-22 (B3.1)
 
 ### 新增与增强 (实时取景预览菜单、色彩矩阵精调、HAL 去重加速与性能审计升级)

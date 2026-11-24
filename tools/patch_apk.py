@@ -589,6 +589,106 @@ def patch_option_menu_layout_smali(layout_path):
     content, c_dup_title = re.subn(dup_title_pat, dup_title_repl, content, count=1)
     record_patch_status(c_dup_title > 0, "PictureEffectPlusOptionMenuLayout.smali: remove duplicate mItemNameView.setText() in onItemSelected()")
 
+    # 13. Restore Ricoh filter cleanly in onPause() if user exits while holding C2
+    if 'RicohHook;->ensureFilterRestored()V' not in content:
+        pat_pause = r'(\.method public onPause\(\)V[\s\S]*?\.prologue\s*)'
+        repl_pause = r'\1invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->ensureFilterRestored()V\n\n    '
+        content, c_pause = re.subn(pat_pause, repl_pause, content, count=1)
+    else:
+        c_pause = 1
+    record_patch_status(
+        'RicohHook;->ensureFilterRestored()V' in content,
+        "PictureEffectPlusOptionMenuLayout.smali: restore filter in onPause() if comparing original"
+    )
+
+    # 14. Append C2 (Delete / Custom2) Hold-to-Compare handlers for live menu preview
+    if '.method public onDeleteKeyPushed(Landroid/view/KeyEvent;)I' not in content:
+        menu_compare_methods = '''
+.method public onDeleteKeyPushed(Landroid/view/KeyEvent;)I
+    .locals 4
+    .param p1, "event"    # Landroid/view/KeyEvent;
+
+    .prologue
+    const/4 v0, 0x1
+
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mItemNameView:Landroid/widget/TextView;
+
+    iget-object v2, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;
+
+    invoke-static {p1, v0, v1, v2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->handleMenuCompareKey(Landroid/view/KeyEvent;ZLandroid/widget/TextView;Ljava/lang/String;)I
+
+    move-result v3
+
+    return v3
+.end method
+
+.method public onDeleteKeyReleased(Landroid/view/KeyEvent;)I
+    .locals 4
+    .param p1, "event"    # Landroid/view/KeyEvent;
+
+    .prologue
+    const/4 v0, 0x0
+
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mItemNameView:Landroid/widget/TextView;
+
+    iget-object v2, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;
+
+    invoke-static {p1, v0, v1, v2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->handleMenuCompareKey(Landroid/view/KeyEvent;ZLandroid/widget/TextView;Ljava/lang/String;)I
+
+    move-result v3
+
+    return v3
+.end method
+
+.method public onCustom2KeyPushed(Landroid/view/KeyEvent;)I
+    .locals 4
+    .param p1, "event"    # Landroid/view/KeyEvent;
+
+    .prologue
+    const/4 v0, 0x1
+
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mItemNameView:Landroid/widget/TextView;
+
+    iget-object v2, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;
+
+    invoke-static {p1, v0, v1, v2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->handleMenuCompareKey(Landroid/view/KeyEvent;ZLandroid/widget/TextView;Ljava/lang/String;)I
+
+    move-result v3
+
+    return v3
+.end method
+
+.method public onCustom2KeyReleased(Landroid/view/KeyEvent;)I
+    .locals 4
+    .param p1, "event"    # Landroid/view/KeyEvent;
+
+    .prologue
+    const/4 v0, 0x0
+
+    iget-object v1, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mItemNameView:Landroid/widget/TextView;
+
+    iget-object v2, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusOptionMenuLayout;->mSelectedItemId:Ljava/lang/String;
+
+    invoke-static {p1, v0, v1, v2}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->handleMenuCompareKey(Landroid/view/KeyEvent;ZLandroid/widget/TextView;Ljava/lang/String;)I
+
+    move-result v3
+
+    return v3
+.end method
+'''
+        content += menu_compare_methods
+
+    for sig in (
+        'onDeleteKeyPushed(Landroid/view/KeyEvent;)I',
+        'onDeleteKeyReleased(Landroid/view/KeyEvent;)I',
+        'onCustom2KeyPushed(Landroid/view/KeyEvent;)I',
+        'onCustom2KeyReleased(Landroid/view/KeyEvent;)I',
+    ):
+        record_patch_status(
+            sig in content,
+            f"PictureEffectPlusOptionMenuLayout.smali: {sig}"
+        )
+
     with open(layout_path, 'w', encoding='utf-8') as f:
         f.write(content)
 
@@ -737,6 +837,16 @@ def patch_key_handler_smali(key_handler_path):
     with open(key_handler_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
+    # Restore Ricoh filter before opening Menu when Center key is pushed
+    if 'RicohHook;->ensureFilterRestored()V' not in content:
+        pat_center = r'(\.method public pushedCenterKey\(\)I[\s\S]*?\.prologue\s*)'
+        repl_center = r'\1invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->ensureFilterRestored()V\n\n    '
+        content, _ = re.subn(pat_center, repl_center, content, count=1)
+    record_patch_status(
+        'RicohHook;->ensureFilterRestored()V' in content,
+        "PictureEffectPlusS1OffEEStateKeyHandler.smali: ensureFilterRestored() in pushedCenterKey()"
+    )
+
     # Add pushedEnter5WayFuncKey and pushedEnterJoyStickFuncKey if not present
     if 'pushedEnter5WayFuncKey' not in content:
         extra_methods = '''
@@ -765,7 +875,150 @@ def patch_key_handler_smali(key_handler_path):
         content += extra_methods
         print("Successfully appended pushedEnter5WayFuncKey and pushedEnterJoyStickFuncKey to key handler")
 
+    # Add C2 (Delete / Custom2) Hold-to-Compare handlers + S1 auto-restore guard
+    if '.method public onDeleteKeyPushed(Landroid/view/KeyEvent;)I' not in content:
+        compare_methods = '''
+.method public onDeleteKeyPushed(Landroid/view/KeyEvent;)I
+    .locals 1
+    .param p1, "event"    # Landroid/view/KeyEvent;
+
+    .prologue
+    const/4 v0, 0x1
+
+    invoke-static {p1, v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->handleShootingCompareKey(Landroid/view/KeyEvent;Z)I
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public onDeleteKeyReleased(Landroid/view/KeyEvent;)I
+    .locals 1
+    .param p1, "event"    # Landroid/view/KeyEvent;
+
+    .prologue
+    const/4 v0, 0x0
+
+    invoke-static {p1, v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->handleShootingCompareKey(Landroid/view/KeyEvent;Z)I
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public onCustom2KeyPushed(Landroid/view/KeyEvent;)I
+    .locals 1
+    .param p1, "event"    # Landroid/view/KeyEvent;
+
+    .prologue
+    const/4 v0, 0x1
+
+    invoke-static {p1, v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->handleShootingCompareKey(Landroid/view/KeyEvent;Z)I
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public onCustom2KeyReleased(Landroid/view/KeyEvent;)I
+    .locals 1
+    .param p1, "event"    # Landroid/view/KeyEvent;
+
+    .prologue
+    const/4 v0, 0x0
+
+    invoke-static {p1, v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->handleShootingCompareKey(Landroid/view/KeyEvent;Z)I
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public pushedS1Key()I
+    .locals 1
+
+    .prologue
+    invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->ensureFilterRestored()V
+
+    invoke-super {p0}, Lcom/sony/imaging/app/base/shooting/trigger/S1OffEEStateKeyHandler;->pushedS1Key()I
+
+    move-result v0
+
+    return v0
+.end method
+'''
+        content += compare_methods
+
+    for sig in (
+        'onDeleteKeyPushed(Landroid/view/KeyEvent;)I',
+        'onDeleteKeyReleased(Landroid/view/KeyEvent;)I',
+        'onCustom2KeyPushed(Landroid/view/KeyEvent;)I',
+        'onCustom2KeyReleased(Landroid/view/KeyEvent;)I',
+        'pushedS1Key()I',
+    ):
+        record_patch_status(
+            sig in content,
+            f"PictureEffectPlusS1OffEEStateKeyHandler.smali: {sig}"
+        )
+
     with open(key_handler_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def patch_stable_layout_smali(stable_layout_path):
+    """Attach floating Original/Before badge and auto-restore Ricoh filter on pause/detach."""
+    print(f"Patching {stable_layout_path}...")
+    with open(stable_layout_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    if 'RicohHook;->attachCompareBadge' not in content:
+        stable_methods = '''
+.method protected createView()V
+    .locals 1
+
+    .prologue
+    invoke-super {p0}, Lcom/sony/imaging/app/base/shooting/layout/StableLayout;->createView()V
+
+    iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusStableLayout;->mCurrentBaseView:Landroid/view/ViewGroup;
+
+    invoke-static {v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->attachCompareBadge(Landroid/view/ViewGroup;)V
+
+    return-void
+.end method
+
+.method protected detachView()V
+    .locals 1
+
+    .prologue
+    iget-object v0, p0, Lcom/sony/imaging/app/pictureeffectplus/shooting/layout/PictureEffectPlusStableLayout;->mCurrentBaseView:Landroid/view/ViewGroup;
+
+    invoke-static {v0}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->detachCompareBadge(Landroid/view/ViewGroup;)V
+
+    invoke-super {p0}, Lcom/sony/imaging/app/base/shooting/layout/StableLayout;->detachView()V
+
+    return-void
+.end method
+
+.method public onPause()V
+    .locals 0
+
+    .prologue
+    invoke-static {}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->ensureFilterRestored()V
+
+    invoke-super {p0}, Lcom/sony/imaging/app/base/shooting/layout/StableLayout;->onPause()V
+
+    return-void
+.end method
+'''
+        content += stable_methods
+
+    record_patch_status(
+        'RicohHook;->attachCompareBadge(Landroid/view/ViewGroup;)V' in content
+        and 'RicohHook;->detachCompareBadge(Landroid/view/ViewGroup;)V' in content
+        and 'RicohHook;->ensureFilterRestored()V' in content,
+        "PictureEffectPlusStableLayout.smali: Before/After compare badge lifecycle"
+    )
+
+    with open(stable_layout_path, 'w', encoding='utf-8') as f:
         f.write(content)
 
 def patch_key_converter_smali(key_converter_path):
@@ -1232,6 +1485,12 @@ def patch_apk(input_apk, output_apk, custom_key=None, keep_work_dir=False):
         layout_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'layout', 'PictureEffectPlusOptionMenuLayout.smali')
         if os.path.exists(layout_smali):
             patch_option_menu_layout_smali(layout_smali)
+
+        stable_layout_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'layout', 'PictureEffectPlusStableLayout.smali')
+        if os.path.exists(stable_layout_smali):
+            patch_stable_layout_smali(stable_layout_smali)
+        else:
+            record_patch_status(False, "PictureEffectPlusStableLayout.smali file not found")
 
         adapter_smali = os.path.join(work_dir, 'smali', 'com', 'sony', 'imaging', 'app', 'pictureeffectplus', 'shooting', 'layout', 'PictureEffectPlusOptionMenuLayout$PictureEffectSpecialBaseMenuAdapter.smali')
         if os.path.exists(adapter_smali):

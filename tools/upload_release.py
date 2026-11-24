@@ -25,32 +25,25 @@ DEFAULT_BODY = """<p align="center">
 
 <h3 id="english">English</h3>
 
-### Sony PMCA Ricoh Camera Mod v2.1.0 (B3.1) Released
+### Sony PMCA Ricoh Camera Mod v2.2.0 (B3.2) Released
 
-This release introduces a **Live Viewfinder Preview Menu** (replacing opaque static sample PNGs with real-time EVF/LCD film simulation preview), **Refined Positive & Negative Film 3×3 Matrices**, **Fast-Path HAL Deduplication & Locale Caching**, and **UI / Logging Performance Hardening**, verified by **29/29 checks PASS** across the 5-Tier testbench!
+This release introduces **Instant C2 / Delete Hold-to-Compare (Before/After)** across both the live shooting viewfinder and the live preset menu, allowing photographers to compare the original un-filtered scene against any active Ricoh film profile in real time!
 
 #### 🌟 Key Highlights & Features
-- **Live Viewfinder Preview Menu (`RicohHook.setupLivePreviewMenu`)**:
-  - Removed the opaque black menu backdrop and disabled static sample PNG loading (`getBackgroundDrawable` / `setBackgroundResource`), exposing the live hardware EE viewfinder directly behind the preset selector.
-  - Added compact translucent (`40%` black) guide strip and dark icon rail contrast backing for clear legibility over bright scenes.
-  - Removed the permanently disabled `ApplicationSettings` dead item from `MenuData.xml`.
-- **Calibrated Film Color Matrices & ISP Simulator Sync**:
-  - Refined **Positive Film** 3×3 hardware matrix (`[991, 203, -170, -21, 1059, -14, 48, 260, 716]`) and **Negative Film** 3×3 hardware matrix (`[848, -54, 230, 169, 641, 214, 66, 278, 680]`).
-  - Synced `tools/color_bench/core/isp_simulator.py` `watercolor` preset to **Leica Steve McCurry Kodachrome** (`[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`, `LB=0, CC=0`).
-- **HAL Deduplication, Split Style Flags & Locale Caching**:
-  - Added fast-path deduplication (`sAppliedPreset`, `sAppliedCameraHash`) in `RicohHook.applyHook()` to skip redundant HAL/DMA commits when re-applying the active preset on the same `CameraEx` instance; cleared cleanly in `resetHook()`.
-  - Split user state backup flags into granular guards (`sHasSavedOriginalColorMode`, `sHasSavedOriginalTone`, `sHasSavedOriginalDRO`, `sHasSavedOriginalHDR`), eliminating monolithic try/catch fallback hazards and removing the `"standard"` overwrite fallback.
-  - Cached `Locale` reference in `getLanguageType()` (`sCachedLocale`, `sCachedLangType`).
-- **UI Responsiveness, Menu Ergonomics & Logging Optimization**:
-  - Replaced `pushedMenuKey()` in `PictureEffectPlusOptionMenuLayout.smali` with a null-safe single-commit implementation (null-guards `mPreviousSelectedeffect`, avoids double `setValue()` on cancel, and calls `closeLayout()` cleanly).
-  - Added Main Dial scrolling (`turnedMainDialNext()` / `turnedMainDialPrev()`), removed redundant double `getMenuItemDrawable()` decoding in `PictureEffectSpecialBaseMenuAdapter`, and removed duplicate `mItemNameView.setText()` calls.
-  - Silenced high-frequency `AppLog` trace/debug methods (`ENABLE_LOG_DEBUG = false`, no-op `checkIf`/`enter`/`exit`/`info`/`trace`) and removed expensive exception stack walks from `getMethodName()` / `getClassName()`.
-- **Automated 5-Tier Verification Testbench Expanded to 29/29 PASS**:
-  - Added `check_applog_silenced` and `check_ricoh_hook_p0_hardening` to Tier 5 (`tools/testbench/test_patched_apk.py`), plus granular split-flag and dedup cache checks in Tier 2 (`tools/testbench/test_pmca_symbols.py`).
+- **Instant Hold-to-Compare Original Scene (`RicohHook.setBypassPreview` / `handleShootingCompareKey` / `handleMenuCompareKey`)**:
+  - Added press-and-hold **C2 / Delete** key handlers (`onDeleteKeyPushed` / `onDeleteKeyReleased` / `onCustom2KeyPushed` / `onCustom2KeyReleased`) to both shooting view (`PictureEffectPlusS1OffEEStateKeyHandler.smali`) and the live preset menu (`PictureEffectPlusOptionMenuLayout.smali`).
+  - Temporarily bypasses Ricoh ISP LUT, matrix, and WB shift registers while held, letting you compare the original un-filtered viewfinder feed against the active Ricoh film preset in real time.
+- **Tri-Lingual Floating Compare Badge (`PictureEffectPlusStableLayout.smali`)**:
+  - Injected `attachCompareBadge()` / `detachCompareBadge()` into `StableLayout` lifecycle (`createView()` / `detachView()`), displaying a high-contrast centered translucent badge (`"ORIGINAL (BEFORE)"`, `"原片對比 (Original)"`, `"原片对比 (Original)"`) in shooting view and updating the preset title inside the live menu.
+- **Fail-Safe Filter Restoration**:
+  - Hooked `pushedS1Key()` (half-press shutter), `StableLayout.onPause()`, and `OptionMenuLayout.onPause()` to invoke `RicohHook.ensureFilterRestored()`, guaranteeing the active Ricoh preset is immediately re-applied if you half-press the shutter, exit the menu, or switch modes while holding C2.
+- **Tier 5 Bytecode Integrity Auditor Expansion**:
+  - Updated `tools/testbench/test_patched_apk.py` to audit `PictureEffectPlusStableLayout.smali` badge lifecycle hooks, `OptionMenuLayout` & `S1OffEEStateKeyHandler` C2/Delete compare handlers, `pushedS1Key()` restore guard, and `RicohHook` bypass/compare methods (**29/29 PASS**).
 - **Inherited Core Capabilities**:
+  - Live Viewfinder Preview Menu (`setupLivePreviewMenu`) with real-time EVF/LCD film simulation preview.
+  - Fast-path HAL/DMA deduplication, split style backup flags, `Locale` caching, and `AppLog` trace silencing.
   - Full user camera state isolation & faithful restoration (`ColorMode`, `Contrast`, `Saturation`, `Sharpness`, `DRO`, `HDR`, `LB`/`CC`).
-  - Drive mode native preservation (`setSADriveMode()` no-op) & RAW mode lock elimination.
-  - Full RAW + JPEG and pure RAW capture modes unlocked.
+  - Drive mode native preservation (`setSADriveMode()` no-op) & RAW mode lock elimination (`RAW + JPEG` and pure `RAW`).
   - BIONZ X ISP hardware state sanitization & zero B&W lock.
   - Universal PMCA cross-generation compatibility (A7, A6000, A6300, A6500, A7M2, A7R2, RX100 series).
 
@@ -67,34 +60,26 @@ This release introduces a **Live Viewfinder Preview Menu** (replacing opaque sta
 
 <h3 id="简体中文">简体中文</h3>
 
-### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v2.1.0 (B3.1) 发布
+### 索尼相机理光胶片滤镜模组 (Sony PMCA Ricoh Mod) v2.2.0 (B3.2) 发布
 
-本版本重磅推出 **实时取景预览菜单**（告别不透明静态样张 PNG，直接在 EVF/屏幕中实时透视胶片滤镜效果）、**理光正片/负片 3×3 色彩矩阵精调**、**HAL 硬件状态去重加速与 Locale 缓存**，以及 **UI 与日志性能深度优化**，五阶自动化测试套件扩充至 **29/29 项全绿通过**！
+本版本重磅推出 **C2 / 删除键按住实时原片对比 (Before/After)** 功能！无论在取景拍摄界面还是实时滤镜菜单中，按住 **C2 / 删除键** 即可瞬时旁路理光滤镜，实时预览机身原片画面对比效果！
 
 #### 🌟 核心更新与亮点
-- **实时取景预览菜单 (`RicohHook.setupLivePreviewMenu`)**:
-  - 移除菜单不透明黑色背景并跳过静态样张 PNG 加载 (`getBackgroundDrawable` / `setBackgroundResource`)，直接透过菜单底层透视硬件实时取景画面；
-  - 为说明栏与左侧图标列表注入 40% 半透明黑底条与暗色轨道，在强光场景下依然保持清晰文字对比度；
-  - 从 `MenuData.xml` 中彻底移除永久禁用的 `ApplicationSettings` 死项。
-- **精调理光胶片色彩矩阵 & ISP 模拟器同步**:
-  - 精调 **理光正片 (Positive Film)** 3×3 硬件色彩矩阵 (`[991, 203, -170, -21, 1059, -14, 48, 260, 716]`) 与 **理光负片 (Negative Film)** 矩阵 (`[848, -54, 230, 169, 641, 214, 66, 278, 680]`)；
-  - 同步 `tools/color_bench/core/isp_simulator.py` 第五预设位配置至 **徕卡麦凯瑞 Kodachrome** (`[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`，`LB=0, CC=0`)。
-- **HAL 状态去重加速、独立参数备份标志与 Locale 缓存**:
-  - 在 `RicohHook.applyHook()` 中新增快速去重路径 (`sAppliedPreset`, `sAppliedCameraHash`)，当同一 `CameraEx` 实例重复应用相同预设时直接跳过冗余 HAL/DMA 写入；在 `resetHook()` 中精准清理；
-  - 将机身参数备份标志拆分为 4 个独立粒度守卫 (`sHasSavedOriginalColorMode`, `sHasSavedOriginalTone`, `sHasSavedOriginalDRO`, `sHasSavedOriginalHDR`)，彻底消除整块 try/catch 回退与 `"standard"` 误覆盖风险；
-  - 在 `getLanguageType()` 中缓存 `Locale` 对象 (`sCachedLocale`, `sCachedLangType`)，避免高频字符串比较开销。
-- **UI 响应速度、按键逻辑与日志静默优化**:
-  - 重构 `PictureEffectPlusOptionMenuLayout.smali` 的 `pushedMenuKey()` 为单次提交安全实现（空值保护 `mPreviousSelectedeffect`，取消时不重复调用 `setValue()` 并干净执行 `closeLayout()`）；
-  - 新增主拨盘滚动支持 (`turnedMainDialNext()` / `turnedMainDialPrev()`)，消除 `PictureEffectSpecialBaseMenuAdapter` 中重复的双次 `getMenuItemDrawable()` 解码及重复的 `mItemNameView.setText()` 调用；
-  - 静默高频 `AppLog` 调试追踪方法 (`ENABLE_LOG_DEBUG = false`，置空 `checkIf`/`enter`/`exit`/`info`/`trace`) 并移除 `getMethodName()` / `getClassName()` 中的异常栈回溯开销。
-- **五阶自动化测试工作台扩充至 29/29 项全通**:
-  - Tier 5 (`tools/testbench/test_patched_apk.py`) 新增 `check_applog_silenced` 与 `check_ricoh_hook_p0_hardening` 检查；Tier 2 (`tools/testbench/test_pmca_symbols.py`) 新增独立备份标志与去重缓存审计。
+- **按住对比机身原片 (`RicohHook.setBypassPreview` / `handleShootingCompareKey` / `handleMenuCompareKey`)**:
+  - 在拍摄取景界面 (`PictureEffectPlusS1OffEEStateKeyHandler.smali`) 与实时滤镜菜单 (`PictureEffectPlusOptionMenuLayout.smali`) 中全面接入 **C2 / 删除键** 按住与松开事件 (`onDeleteKeyPushed` / `onDeleteKeyReleased` / `onCustom2KeyPushed` / `onCustom2KeyReleased`)；
+  - 按住时瞬时旁路理光 ISP LUT、色彩矩阵与白平衡偏移，实时在 EVF/屏幕上预览未加滤镜的机身原片画面，方便与胶片模拟效果进行直觉对比。
+- **三语悬浮对比提示徽章 (`PictureEffectPlusStableLayout.smali`)**:
+  - 在 `StableLayout` 生命周期 (`createView()` / `detachView()`) 中挂载 `attachCompareBadge()` / `detachCompareBadge()`，在取景画面顶部居中显示高对比半透明悬浮提示（`"原片对比 (Original)"` / `"原片對比 (Original)"` / `"ORIGINAL (BEFORE)"`），并在菜单预览时同步更新预设标题提示。
+- **防呆自动恢复保护**:
+  - 在 `pushedS1Key()`（半按快门对焦）、`StableLayout.onPause()` 与 `OptionMenuLayout.onPause()` 中强制调用 `RicohHook.ensureFilterRestored()`，确保半按快门、退出菜单或切换模式时瞬时恢复理光滤镜状态。
+- **Tier 5 字节码审计增强**:
+  - 扩充 `tools/testbench/test_patched_apk.py`，全面审计 `StableLayout` 徽章生命周期、双界面 C2/删除键事件、`pushedS1Key()` 恢复守卫及 `RicohHook` 旁路对比逻辑（**29/29 项全绿通过**）。
 - **继承特性**:
+  - 实时取景预览菜单 (`setupLivePreviewMenu`)，告别不透明静态样张 PNG；
+  - HAL 硬件状态去重加速、独立参数备份标志、`Locale` 缓存与高频 `AppLog` 静默；
   - 机身参数状态隔离备份与无损忠实还原 (`ColorMode`, `Contrast`, `Saturation`, `Sharpness`, `DRO`, `HDR`, `LB`/`CC`)；
   - 驱动模式原生保护 (`setSADriveMode()` 空操作) 与 RAW 模式锁定全面终结；
-  - 保持 RAW+JPEG 与纯 RAW 双格式保存能力；
-  - BIONZ X ISP 硬件寄存器彻底清洗与杜绝黑白锁定；
-  - 兼容 PMCA 一代与二代全部微单/黑卡机型，五阶测试台 29/29 项 100% 全通。
+  - BIONZ X ISP 硬件寄存器彻底清洗与杜绝黑白锁定，兼容 PMCA 一代与二代全部微单/黑卡机型。
 
 #### 📦 附件说明
 - `PictureEffectPlus_Ricoh.apk`：已通过 29 项跨机型测试台验证的正式安装包（纯 V1 签名 + 4 字节对齐）。
@@ -109,34 +94,26 @@ This release introduces a **Live Viewfinder Preview Menu** (replacing opaque sta
 
 <h3 id="繁體中文">繁體中文</h3>
 
-### 索尼相機理光底片濾鏡模組 (Sony PMCA Ricoh Mod) v2.1.0 (B3.1) 發布
+### 索尼相機理光底片濾鏡模組 (Sony PMCA Ricoh Mod) v2.2.0 (B3.2) 發布
 
-本版本重磅推出 **即時取景預覽選單**（告別不透明靜態樣張 PNG，直接在觀景窗/螢幕中即時透視底片濾鏡效果）、**理光正片/負片 3×3 色彩矩陣精調**、**HAL 硬體狀態去重加速與 Locale 快取**，以及 **UI 與日誌效能深度最佳化**，五階自動化測試套件擴充至 **29/29 項全綠通過**！
+本版本重磅推出 **C2 / 刪除鍵按住即時原片對比 (Before/After)** 功能！無論在取景拍攝介面還是即時濾鏡選單中，按住 **C2 / 刪除鍵** 即可瞬時旁路理光濾鏡，即時預覽機身原片畫面對比效果！
 
 #### 🌟 核心更新與亮點
-- **即時取景預覽選單 (`RicohHook.setupLivePreviewMenu`)**:
-  - 移除選單不透明黑色背景並跳過靜態樣張 PNG 載入 (`getBackgroundDrawable` / `setBackgroundResource`)，直接透過選單底層透視硬體即時取景畫面；
-  - 為說明欄與左側圖示列表注入 40% 半透明黑底條與暗色軌道，在強光場景下依然保持清晰文字對比度；
-  - 從 `MenuData.xml` 中徹底移除永久停用的 `ApplicationSettings` 死項。
-- **精調理光底片色彩矩陣 & ISP 模擬器同步**:
-  - 精調 **理光正片 (Positive Film)** 3×3 硬體色彩矩陣 (`[991, 203, -170, -21, 1059, -14, 48, 260, 716]`) 與 **理光負片 (Negative Film)** 矩陣 (`[848, -54, 230, 169, 641, 214, 66, 278, 680]`)；
-  - 同步 `tools/color_bench/core/isp_simulator.py` 第五預設位配置至 **徠卡麥凱瑞 Kodachrome** (`[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]`，`LB=0, CC=0`)。
-- **HAL 狀態去重加速、獨立參數備份旗標與 Locale 快取**:
-  - 在 `RicohHook.applyHook()` 中新增快速去重路徑 (`sAppliedPreset`, `sAppliedCameraHash`)，當同一 `CameraEx` 實例重複套用相同預設時直接跳過冗餘 HAL/DMA 寫入；在 `resetHook()` 中精準清理；
-  - 將機身參數備份旗標拆分為 4 個獨立粒度守衛 (`sHasSavedOriginalColorMode`, `sHasSavedOriginalTone`, `sHasSavedOriginalDRO`, `sHasSavedOriginalHDR`)，徹底消除整塊 try/catch 回退與 `"standard"` 誤覆蓋風險；
-  - 在 `getLanguageType()` 中快取 `Locale` 物件 (`sCachedLocale`, `sCachedLangType`)，避免高頻字串比較開銷。
-- **UI 反應速度、按鍵邏輯與日誌靜默最佳化**:
-  - 重構 `PictureEffectPlusOptionMenuLayout.smali` 的 `pushedMenuKey()` 為單次提交安全實作（空值保護 `mPreviousSelectedeffect`，取消時不重複呼叫 `setValue()` 並乾淨執行 `closeLayout()`）；
-  - 新增主轉盤捲動支援 (`turnedMainDialNext()` / `turnedMainDialPrev()`)，消除 `PictureEffectSpecialBaseMenuAdapter` 中重複的雙次 `getMenuItemDrawable()` 解碼及重複的 `mItemNameView.setText()` 呼叫；
-  - 靜默高頻 `AppLog` 除錯追蹤方法 (`ENABLE_LOG_DEBUG = false`，置空 `checkIf`/`enter`/`exit`/`info`/`trace`) 並移除 `getMethodName()` / `getClassName()` 中的異常堆疊回溯開銷。
-- **五階自動化測試工作台擴充至 29/29 項全通**:
-  - Tier 5 (`tools/testbench/test_patched_apk.py`) 新增 `check_applog_silenced` 與 `check_ricoh_hook_p0_hardening` 檢查；Tier 2 (`tools/testbench/test_pmca_symbols.py`) 新增獨立備份旗標與去重快取審計。
+- **按住對比機身原片 (`RicohHook.setBypassPreview` / `handleShootingCompareKey` / `handleMenuCompareKey`)**:
+  - 在拍攝取景介面 (`PictureEffectPlusS1OffEEStateKeyHandler.smali`) 與即時濾鏡選單 (`PictureEffectPlusOptionMenuLayout.smali`) 中全面接入 **C2 / 刪除鍵** 按住與放開事件 (`onDeleteKeyPushed` / `onDeleteKeyReleased` / `onCustom2KeyPushed` / `onCustom2KeyReleased`)；
+  - 按住時瞬時旁路理光 ISP LUT、色彩矩陣與白平衡偏移，即時在觀景窗/螢幕上預覽未套用濾鏡的機身原片畫面，方便與底片模擬效果進行直覺對比。
+- **三語懸浮對比提示徽章 (`PictureEffectPlusStableLayout.smali`)**:
+  - 在 `StableLayout` 生命週期 (`createView()` / `detachView()`) 中掛載 `attachCompareBadge()` / `detachCompareBadge()`，在取景畫面頂部置中顯示高對比半透明懸浮提示（`"原片對比 (Original)"` / `"原片对比 (Original)"` / `"ORIGINAL (BEFORE)"`），並在選單預覽時同步更新預設標題提示。
+- **防呆自動恢復保護**:
+  - 在 `pushedS1Key()`（半按快門對焦）、`StableLayout.onPause()` 與 `OptionMenuLayout.onPause()` 中強制呼叫 `RicohHook.ensureFilterRestored()`，確保半按快門、退出選單或切換模式時瞬時恢復理光濾鏡狀態。
+- **Tier 5 位元組碼審計增強**:
+  - 擴充 `tools/testbench/test_patched_apk.py`，全面審計 `StableLayout` 徽章生命週期、雙介面 C2/刪除鍵事件、`pushedS1Key()` 恢復守衛及 `RicohHook` 旁路對比邏輯（**29/29 項全綠通過**）。
 - **繼承特性**:
+  - 即時取景預覽選單 (`setupLivePreviewMenu`)，告別不透明靜態樣張 PNG；
+  - HAL 硬體狀態去重加速、獨立參數備份旗標、`Locale` 快取與高頻 `AppLog` 靜默；
   - 機身參數狀態隔離備份與無損忠實還原 (`ColorMode`, `Contrast`, `Saturation`, `Sharpness`, `DRO`, `HDR`, `LB`/`CC`)；
   - 驅動模式原生保護 (`setSADriveMode()` 空操作) 與 RAW 模式鎖定全面終結；
-  - 保持 RAW+JPEG 與純 RAW 雙格式儲存能力；
-  - BIONZ X ISP 硬體暫存器徹底清洗與杜絕黑白鎖定；
-  - 相容 PMCA 一代與二代全部微單眼/黑卡機型，五階測試台 29/29 項 100% 全通。
+  - BIONZ X ISP 硬體暫存器徹底清洗與杜絕黑白鎖定，相容 PMCA 一代與二代全部微單眼/黑卡機型。
 
 #### 📦 附件說明
 - `PictureEffectPlus_Ricoh.apk`：已通過 29 項跨機型測試台驗證的正式安裝包（純 V1 簽名 + 4 位元組對齊）。
@@ -148,7 +125,7 @@ This release introduces a **Live Viewfinder Preview Menu** (replacing opaque sta
 ```
 """
 
-def publish_release(token, tag="v2.1.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
+def publish_release(token, tag="v2.2.0", apk_path="PictureEffectPlus_Ricoh.apk", title=None, body=None):
     if not os.path.exists(apk_path):
         raise FileNotFoundError(f"APK not found: {apk_path}")
 
@@ -158,7 +135,7 @@ def publish_release(token, tag="v2.1.0", apk_path="PictureEffectPlus_Ricoh.apk",
         "User-Agent": "Sony-PMCA-Publisher"
     }
 
-    title = title or f"{tag} (B3.1) - 实时取景预览菜单 / 色彩矩阵精调 / HAL 去重加速 & 29项全通测试"
+    title = title or f"{tag} (B3.2) - C2/删除键按住实时原片对比 (Before/After) & 防呆自动恢复"
     body = body or DEFAULT_BODY
 
     # 1. Check if release already exists for this tag
@@ -224,7 +201,7 @@ def publish_release(token, tag="v2.1.0", apk_path="PictureEffectPlus_Ricoh.apk",
 def main():
     parser = argparse.ArgumentParser(description="Publish Release to GitHub")
     parser.add_argument('-t', '--token', default=os.environ.get('GITHUB_TOKEN'), help="GitHub Personal Access Token")
-    parser.add_argument('--tag', default="v2.1.0", help="Release tag (default: v2.1.0)")
+    parser.add_argument('--tag', default="v2.2.0", help="Release tag (default: v2.2.0)")
     parser.add_argument('--apk', default="PictureEffectPlus_Ricoh.apk", help="Path to APK binary")
     args = parser.parse_args()
 

@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v2.1.0--B3.1-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v2.2.0--B3.2-orange?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Testbench-29%2F29%20PASS%20(5--Tier)-brightgreen?style=flat-square" alt="Testbench">
 </p>
 
@@ -27,6 +27,10 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
 - 👁️ **Live Viewfinder Preview Menu & Zero-Flicker HAL Pipeline**:
   - Replaces opaque static sample PNGs in the preset menu with real-time live-view EVF/LCD preview (`setupLivePreviewMenu`), featuring translucent guide strips and icon rail contrast overlay.
   - Fast-path HAL/DMA deduplication (`sAppliedPreset` / `sAppliedCameraHash`), `Locale` caching, `AppLog` trace silencing, and single-decode menu adapters eliminate redundant IPC/bitmap overhead.
+
+- 🔍 **Instant C2 / Delete Hold-to-Compare (Before/After)**:
+  - Press and hold the **C2 / Delete** button in either shooting view or the live preset menu to bypass Ricoh ISP registers in real time, revealing the original un-filtered scene with a tri-lingual floating indicator (`ORIGINAL (BEFORE)` / `原片对比 (Original)` / `原片對比 (Original)`).
+  - Releasing the key, half-pressing the shutter (`pushedS1Key`), or pausing the layout immediately restores the active Ricoh film profile.
 
 - 🔄 **User Camera State Isolation & Faithful Restoration**:
   - Automatically captures and backs up the user's pre-existing Creative Style (`ColorMode`, `Contrast`, `Saturation`, `Sharpness`), Dynamic Range Optimizer (`DRO`), High Dynamic Range (`HDR`), and White Balance (`LB`/`CC` shifts) from live `CameraSetting.getParameters()`.

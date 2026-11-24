@@ -11,6 +11,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-11-24 (B3.2)
+
+### Added & Enhanced (Instant C2 / Delete Hold-to-Compare Before/After Viewfinder Preview)
+- **Hold-to-Compare Original Scene (`RicohHook.setBypassPreview` / `handleShootingCompareKey` / `handleMenuCompareKey`)**:
+  - Added press-and-hold **C2 / Delete** key handlers (`onDeleteKeyPushed` / `onDeleteKeyReleased` / `onCustom2KeyPushed` / `onCustom2KeyReleased`) to both shooting view (`PictureEffectPlusS1OffEEStateKeyHandler.smali`) and the live preset menu (`PictureEffectPlusOptionMenuLayout.smali`).
+  - Temporarily bypasses Ricoh ISP LUT, matrix, and WB shift registers while held, letting photographers compare the original un-filtered viewfinder feed against the active Ricoh film preset in real time.
+- **Tri-Lingual Floating Compare Badge (`PictureEffectPlusStableLayout.smali`)**:
+  - Injected `attachCompareBadge()` / `detachCompareBadge()` into `StableLayout` lifecycle (`createView()` / `detachView()`), displaying a high-contrast centered translucent badge (`"ORIGINAL (BEFORE)"`, `"原片對比 (Original)"`, `"原片对比 (Original)"`) in shooting view and updating the preset title inside the live menu.
+- **Fail-Safe Filter Restoration**:
+  - Hooked `pushedS1Key()` (half-press shutter), `StableLayout.onPause()`, and `OptionMenuLayout.onPause()` to invoke `RicohHook.ensureFilterRestored()`, guaranteeing the active Ricoh preset is immediately re-applied if the user half-presses the shutter, exits the menu, or switches modes while holding C2.
+- **Tier 5 Bytecode Integrity Auditor Expansion**:
+  - Updated `tools/testbench/test_patched_apk.py` to audit `PictureEffectPlusStableLayout.smali` badge lifecycle hooks, `OptionMenuLayout` & `S1OffEEStateKeyHandler` C2/Delete compare handlers, `pushedS1Key()` restore guard, and `RicohHook` bypass/compare methods (**29/29 PASS**).
+
 ## [2.1.0] - 2026-11-22 (B3.1)
 
 ### Added & Enhanced (Live Viewfinder Preview Menu, Matrix Refinement, HAL Deduplication & Performance)

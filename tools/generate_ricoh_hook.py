@@ -91,6 +91,9 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
 .field private static sAppliedCameraHash:I
 .field private static sCachedLocale:Ljava/util/Locale;
 .field private static sCachedLangType:I
+.field private static sBypassOriginal:Z
+.field private static sActivePreset:Ljava/lang/String;
+.field private static sCompareBadge:Landroid/widget/TextView;
 .field private static sOriginalLB:I
 .field private static sOriginalCC:I
 .field private static sHasSavedOriginalWB:Z
@@ -131,6 +134,9 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedCameraHash:I
     sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCachedLocale:Ljava/util/Locale;
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCachedLangType:I
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sActivePreset:Ljava/lang/String;
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCompareBadge:Landroid/widget/TextView;
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
     sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
@@ -611,6 +617,15 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     return v0
 
     :cond_0
+    # If currently bypassing for Before/After comparison, exit bypass mode cleanly
+    sget-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+    if-eqz v0, :cond_not_bypass
+    const/4 v0, 0x0
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+    invoke-static {{v0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->updateCompareBadgeVisibility(Z)V
+
+    :cond_not_bypass
+    const/4 v0, 0x0
     # Fast-path deduplication: skip redundant HAL/DMA commits if same preset is already active on same CameraEx
     sget-boolean v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
     if-eqz v1, :cond_not_cached
@@ -983,6 +998,7 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     sput v3, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedCameraHash:I
 
     :goto_cache_done
+    sput-object p2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sActivePreset:Ljava/lang/String;
     const/4 v2, 0x1
     sput-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
     const-string v2, "RicohHook"
@@ -1010,6 +1026,9 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     const/4 v0, 0x0
     sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedPreset:Ljava/lang/String;
     sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedCameraHash:I
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sActivePreset:Ljava/lang/String;
+    invoke-static {{v0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->updateCompareBadgeVisibility(Z)V
 
     sget-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
     if-nez v0, :cond_0
@@ -1673,6 +1692,396 @@ smali_content = f'''.class public Lcom/sony/imaging/app/pictureeffectplus/shooti
     const-string v2, "setupLivePreviewMenu failed"
     invoke-static {{v1, v2, v0}}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
     return-void
+.end method
+
+.method public static getCompareBadgeText()Ljava/lang/String;
+    .locals 2
+
+    invoke-static {{}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getLanguageType()I
+    move-result v1
+    if-nez v1, :cond_badge_zh
+    const-string v0, "ORIGINAL (BEFORE)"
+    return-object v0
+
+    :cond_badge_zh
+    const/4 v0, 0x1
+    if-ne v1, v0, :cond_badge_cn
+    const-string v0, "\u539f\u7247\u5c0d\u6bd4 (Original)"
+    return-object v0
+
+    :cond_badge_cn
+    const-string v0, "\u539f\u7247\u5bf9\u6bd4 (Original)"
+    return-object v0
+.end method
+
+.method private static updateCompareBadgeVisibility(Z)V
+    .locals 2
+    .param p0, "visible"    # Z
+
+    sget-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCompareBadge:Landroid/widget/TextView;
+    if-eqz v0, :cond_badge_vis_done
+
+    :try_start_badge_vis
+    if-eqz p0, :cond_badge_gone
+    const/4 v1, 0x0
+    goto :goto_badge_apply
+
+    :cond_badge_gone
+    const/16 v1, 0x8
+
+    :goto_badge_apply
+    invoke-virtual {{v0, v1}}, Landroid/widget/TextView;->setVisibility(I)V
+    :try_end_badge_vis
+    .catch Ljava/lang/Throwable; {{:try_start_badge_vis .. :try_end_badge_vis}} :catch_badge_vis
+
+    :cond_badge_vis_done
+    :goto_badge_vis_done
+    return-void
+
+    :catch_badge_vis
+    move-exception v0
+    goto :goto_badge_vis_done
+.end method
+
+.method public static attachCompareBadge(Landroid/view/ViewGroup;)V
+    .locals 6
+    .param p0, "baseView"    # Landroid/view/ViewGroup;
+
+    :try_start_attach
+    if-nez p0, :cond_attach_check_type
+    return-void
+
+    :cond_attach_check_type
+    instance-of v2, p0, Landroid/widget/RelativeLayout;
+    if-nez v2, :cond_attach_detach_old
+    return-void
+
+    :cond_attach_detach_old
+    sget-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCompareBadge:Landroid/widget/TextView;
+    if-eqz v0, :cond_attach_ctx
+    invoke-virtual {{v0}}, Landroid/widget/TextView;->getParent()Landroid/view/ViewParent;
+    move-result-object v1
+    instance-of v2, v1, Landroid/view/ViewGroup;
+    if-eqz v2, :cond_attach_ctx
+    check-cast v1, Landroid/view/ViewGroup;
+    invoke-virtual {{v1, v0}}, Landroid/view/ViewGroup;->removeView(Landroid/view/View;)V
+
+    :cond_attach_ctx
+    invoke-virtual {{p0}}, Landroid/view/ViewGroup;->getContext()Landroid/content/Context;
+    move-result-object v1
+    if-nez v1, :cond_attach_create
+    return-void
+
+    :cond_attach_create
+    new-instance v0, Landroid/widget/TextView;
+    invoke-direct {{v0, v1}}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
+
+    invoke-static {{}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getCompareBadgeText()Ljava/lang/String;
+    move-result-object v1
+    invoke-virtual {{v0, v1}}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
+
+    const/4 v2, -0x1
+    invoke-virtual {{v0, v2}}, Landroid/widget/TextView;->setTextColor(I)V
+
+    const/4 v2, 0x0
+    const v3, 0x41b00000
+    invoke-virtual {{v0, v2, v3}}, Landroid/widget/TextView;->setTextSize(IF)V
+
+    const v2, 0x7f000000
+    invoke-virtual {{v0, v2}}, Landroid/widget/TextView;->setBackgroundColor(I)V
+
+    const/16 v2, 0x10
+    const/4 v3, 0x6
+    const/16 v4, 0x10
+    const/4 v5, 0x6
+    invoke-virtual {{v0, v2, v3, v4, v5}}, Landroid/widget/TextView;->setPadding(IIII)V
+
+    const/16 v2, 0x11
+    invoke-virtual {{v0, v2}}, Landroid/widget/TextView;->setGravity(I)V
+
+    new-instance v1, Landroid/widget/RelativeLayout$LayoutParams;
+    const/4 v2, -0x2
+    const/4 v3, -0x2
+    invoke-direct {{v1, v2, v3}}, Landroid/widget/RelativeLayout$LayoutParams;-><init>(II)V
+
+    const/16 v2, 0xe
+    invoke-virtual {{v1, v2}}, Landroid/widget/RelativeLayout$LayoutParams;->addRule(I)V
+
+    const/16 v2, 0xa
+    invoke-virtual {{v1, v2}}, Landroid/widget/RelativeLayout$LayoutParams;->addRule(I)V
+
+    const/4 v2, 0x0
+    const/16 v3, 0x38
+    const/4 v4, 0x0
+    const/4 v5, 0x0
+    invoke-virtual {{v1, v2, v3, v4, v5}}, Landroid/widget/RelativeLayout$LayoutParams;->setMargins(IIII)V
+
+    invoke-virtual {{v0, v1}}, Landroid/widget/TextView;->setLayoutParams(Landroid/view/ViewGroup$LayoutParams;)V
+
+    sget-boolean v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+    if-eqz v2, :cond_attach_hidden
+    const/4 v3, 0x0
+    goto :goto_attach_vis
+
+    :cond_attach_hidden
+    const/16 v3, 0x8
+
+    :goto_attach_vis
+    invoke-virtual {{v0, v3}}, Landroid/widget/TextView;->setVisibility(I)V
+    invoke-virtual {{p0, v0}}, Landroid/view/ViewGroup;->addView(Landroid/view/View;)V
+    sput-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCompareBadge:Landroid/widget/TextView;
+    :try_end_attach
+    .catch Ljava/lang/Throwable; {{:try_start_attach .. :try_end_attach}} :catch_attach
+    return-void
+
+    :catch_attach
+    move-exception v0
+    const-string v1, "RicohHook"
+    const-string v2, "attachCompareBadge failed"
+    invoke-static {{v1, v2, v0}}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
+    return-void
+.end method
+
+.method public static detachCompareBadge(Landroid/view/ViewGroup;)V
+    .locals 3
+    .param p0, "baseView"    # Landroid/view/ViewGroup;
+
+    :try_start_detach
+    sget-object v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCompareBadge:Landroid/widget/TextView;
+    if-eqz v0, :cond_detach_done
+
+    if-eqz p0, :cond_detach_parent
+    invoke-virtual {{p0, v0}}, Landroid/view/ViewGroup;->removeView(Landroid/view/View;)V
+    goto :goto_detach_clear
+
+    :cond_detach_parent
+    invoke-virtual {{v0}}, Landroid/widget/TextView;->getParent()Landroid/view/ViewParent;
+    move-result-object v1
+    instance-of v2, v1, Landroid/view/ViewGroup;
+    if-eqz v2, :cond_detach_clear
+    check-cast v1, Landroid/view/ViewGroup;
+    invoke-virtual {{v1, v0}}, Landroid/view/ViewGroup;->removeView(Landroid/view/View;)V
+
+    :cond_detach_clear
+    :goto_detach_clear
+    const/4 v1, 0x0
+    sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCompareBadge:Landroid/widget/TextView;
+
+    :cond_detach_done
+    :try_end_detach
+    .catch Ljava/lang/Throwable; {{:try_start_detach .. :try_end_detach}} :catch_detach
+    return-void
+
+    :catch_detach
+    move-exception v0
+    const/4 v1, 0x0
+    sput-object v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sCompareBadge:Landroid/widget/TextView;
+    return-void
+.end method
+
+.method public static setBypassPreview(Z)V
+    .locals 8
+    .param p0, "bypass"    # Z
+
+    sget-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+    if-eq v0, p0, :cond_bp_noop
+
+    invoke-static {{}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getInstance()Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;
+    move-result-object v1
+    if-eqz v1, :cond_bp_noop
+
+    if-eqz p0, :cond_bp_restore
+
+    sget-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIsRicohActive:Z
+    if-eqz v0, :cond_bp_noop
+
+    const/4 v0, 0x1
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+
+    const/4 v2, 0x0
+    sput-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedPreset:Ljava/lang/String;
+
+    const/4 v0, 0x0
+    sput v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sAppliedCameraHash:I
+
+    invoke-static {{v1}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getCameraEx(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)Lcom/sony/scalar/hardware/CameraEx;
+    move-result-object v2
+    if-eqz v2, :cond_bp_gt_done
+
+    :try_start_bp_gt
+    const/4 v3, 0x0
+    invoke-virtual {{v2, v3}}, Lcom/sony/scalar/hardware/CameraEx;->setExtendedGammaTable(Lcom/sony/scalar/hardware/CameraEx$GammaTable;)V
+    :try_end_bp_gt
+    .catch Ljava/lang/Throwable; {{:try_start_bp_gt .. :try_end_bp_gt}} :catch_bp_gt
+    goto :cond_bp_gt_done
+
+    :catch_bp_gt
+    move-exception v7
+
+    :cond_bp_gt_done
+    invoke-static {{v1}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getCameraSetting(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;
+    move-result-object v2
+    if-eqz v2, :cond_bp_badge_on
+
+    invoke-virtual {{v2}}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->getEmptyParameters()Landroid/util/Pair;
+    move-result-object v3
+    if-eqz v3, :cond_bp_badge_on
+
+    iget-object v4, v3, Landroid/util/Pair;->second:Ljava/lang/Object;
+    check-cast v4, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;
+    if-eqz v4, :cond_bp_badge_on
+
+    :try_start_bp_mat
+    sget-object v5, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sIdentityMatrix:[I
+    invoke-virtual {{v4, v5}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setRGBMatrix([I)V
+    :try_end_bp_mat
+    .catch Ljava/lang/Throwable; {{:try_start_bp_mat .. :try_end_bp_mat}} :catch_bp_mat
+    goto :cond_bp_mat_done
+
+    :catch_bp_mat
+    move-exception v7
+
+    :cond_bp_mat_done
+    :try_start_bp_wb
+    sget-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sHasSavedOriginalWB:Z
+    if-eqz v0, :cond_bp_wb_zero
+    sget v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalLB:I
+    sget v6, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sOriginalCC:I
+    goto :goto_bp_wb_apply
+
+    :cond_bp_wb_zero
+    const/4 v0, 0x0
+    const/4 v6, 0x0
+
+    :goto_bp_wb_apply
+    invoke-virtual {{v4, v0}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setLightBalanceForWhiteBalance(I)V
+    invoke-virtual {{v4, v6}}, Lcom/sony/scalar/hardware/CameraEx$ParametersModifier;->setColorCompensationForWhiteBalance(I)V
+    :try_end_bp_wb
+    .catch Ljava/lang/Throwable; {{:try_start_bp_wb .. :try_end_bp_wb}} :catch_bp_wb
+    goto :cond_bp_wb_done
+
+    :catch_bp_wb
+    move-exception v7
+
+    :cond_bp_wb_done
+    :try_start_bp_commit
+    invoke-virtual {{v2, v3}}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->setParameters(Landroid/util/Pair;)V
+    :try_end_bp_commit
+    .catch Ljava/lang/Throwable; {{:try_start_bp_commit .. :try_end_bp_commit}} :catch_bp_commit
+    goto :cond_bp_badge_on
+
+    :catch_bp_commit
+    move-exception v7
+
+    :cond_bp_badge_on
+    const/4 v0, 0x1
+    invoke-static {{v0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->updateCompareBadgeVisibility(Z)V
+    return-void
+
+    :cond_bp_restore
+    const/4 v0, 0x0
+    sput-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+    invoke-static {{v0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->updateCompareBadgeVisibility(Z)V
+
+    sget-object v2, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sActivePreset:Ljava/lang/String;
+    if-nez v2, :cond_bp_have_preset
+    invoke-virtual {{v1}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;->getBackupEffectValue()Ljava/lang/String;
+    move-result-object v2
+
+    :cond_bp_have_preset
+    if-eqz v2, :cond_bp_noop
+    invoke-static {{v2}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->isRicohPreset(Ljava/lang/String;)Z
+    move-result v0
+    if-eqz v0, :cond_bp_noop
+
+    invoke-static {{v1}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getCameraSetting(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;)Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;
+    move-result-object v3
+    if-eqz v3, :cond_bp_noop
+
+    invoke-virtual {{v3}}, Lcom/sony/imaging/app/base/shooting/camera/CameraSetting;->getEmptyParameters()Landroid/util/Pair;
+    move-result-object v4
+    invoke-static {{v1, v4, v2}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->applyHook(Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/PictureEffectPlusController;Landroid/util/Pair;Ljava/lang/String;)Z
+
+    :cond_bp_noop
+    return-void
+.end method
+
+.method public static ensureFilterRestored()V
+    .locals 1
+
+    sget-boolean v0, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+    if-eqz v0, :cond_efr_done
+    const/4 v0, 0x0
+    invoke-static {{v0}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->setBypassPreview(Z)V
+
+    :cond_efr_done
+    return-void
+.end method
+
+.method public static handleShootingCompareKey(Landroid/view/KeyEvent;Z)I
+    .locals 1
+    .param p0, "event"    # Landroid/view/KeyEvent;
+    .param p1, "pressed"    # Z
+
+    if-eqz p1, :cond_hsc_apply
+    if-eqz p0, :cond_hsc_apply
+    invoke-virtual {{p0}}, Landroid/view/KeyEvent;->getRepeatCount()I
+    move-result v0
+    if-eqz v0, :cond_hsc_apply
+    const/4 v0, 0x1
+    return v0
+
+    :cond_hsc_apply
+    invoke-static {{p1}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->setBypassPreview(Z)V
+    const/4 v0, 0x1
+    return v0
+.end method
+
+.method public static handleMenuCompareKey(Landroid/view/KeyEvent;ZLandroid/widget/TextView;Ljava/lang/String;)I
+    .locals 2
+    .param p0, "event"    # Landroid/view/KeyEvent;
+    .param p1, "pressed"    # Z
+    .param p2, "itemNameView"    # Landroid/widget/TextView;
+    .param p3, "selectedItemId"    # Ljava/lang/String;
+
+    if-eqz p1, :cond_hmc_apply
+    if-eqz p0, :cond_hmc_apply
+    invoke-virtual {{p0}}, Landroid/view/KeyEvent;->getRepeatCount()I
+    move-result v1
+    if-eqz v1, :cond_hmc_apply
+    const/4 v1, 0x1
+    return v1
+
+    :cond_hmc_apply
+    invoke-static {{p1}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->setBypassPreview(Z)V
+
+    if-eqz p2, :cond_hmc_done
+
+    :try_start_hmc_ui
+    if-eqz p1, :cond_hmc_restore_title
+    sget-boolean v1, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->sBypassOriginal:Z
+    if-eqz v1, :cond_hmc_done
+    invoke-static {{}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getCompareBadgeText()Ljava/lang/String;
+    move-result-object v0
+    invoke-virtual {{p2, v0}}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
+    goto :cond_hmc_done
+
+    :cond_hmc_restore_title
+    invoke-static {{p3}}, Lcom/sony/imaging/app/pictureeffectplus/shooting/camera/RicohHook;->getFilterName(Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v0
+    if-eqz v0, :cond_hmc_done
+    invoke-virtual {{p2, v0}}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
+    :try_end_hmc_ui
+    .catch Ljava/lang/Throwable; {{:try_start_hmc_ui .. :try_end_hmc_ui}} :catch_hmc_ui
+
+    :cond_hmc_done
+    :goto_hmc_done
+    const/4 v1, 0x1
+    return v1
+
+    :catch_hmc_ui
+    move-exception v0
+    goto :goto_hmc_done
 .end method
 '''
 

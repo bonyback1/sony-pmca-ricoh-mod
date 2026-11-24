@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-v2.1.0--B3.1-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v2.2.0--B3.2-orange?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Testbench-29%2F29%20PASS%20(5--Tier)-brightgreen?style=flat-square" alt="Testbench">
 </p>
 
@@ -27,6 +27,10 @@
 - 👁️ **实时取景预览菜单与零闪烁 HAL 管线**:
   - 彻底移除菜单中的不透明静态样张 PNG，通过 `setupLivePreviewMenu` 实现取景器/屏幕**实时胶片滤镜预览**，搭配半透明指南条与高对比左侧图标轨道；
   - 新增 `sAppliedPreset` / `sAppliedCameraHash` 硬件状态去重缓存、`Locale` 缓存、高频率 `AppLog` 静默以及单次图标解码优化，大幅降低菜单切换与预览延迟。
+
+- 🔍 **C2 / 删除键按住实时原片对比 (Before/After)**:
+  - 在取景拍摄界面或实时滤镜菜单中，按住 **C2 / 删除键** 即可瞬时旁路理光 ISP 寄存器，在取景器/屏幕上实时查看未加滤镜的机身原片效果，并弹出三语悬浮提示徽章（`原片对比 (Original)` / `原片對比 (Original)` / `ORIGINAL (BEFORE)`）；
+  - 松开按键、半按快门对焦 (`pushedS1Key`) 或离开页面时自动瞬时恢复当前理光胶片预设。
 
 - 🔄 **用户机身参数隔离备份与无损忠实还原**:
   - 首次应用滤镜时从实时 `CameraSetting.getParameters()` 捕获并备份用户原有的创意风格 (`ColorMode`)、对比度 (`Contrast`)、饱和度 (`Saturation`)、锐度 (`Sharpness`)、动态范围优化 (`DRO`)、高动态范围 (`HDR`) 以及白平衡偏置 (`LB`/`CC`)；

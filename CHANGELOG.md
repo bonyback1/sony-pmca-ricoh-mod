@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added press-and-hold **C2 / Delete** key handlers (`onDeleteKeyPushed` / `onDeleteKeyReleased` / `onCustom2KeyPushed` / `onCustom2KeyReleased`) to both shooting view (`PictureEffectPlusS1OffEEStateKeyHandler.smali`) and the live preset menu (`PictureEffectPlusOptionMenuLayout.smali`).
   - Temporarily bypasses Ricoh ISP LUT, matrix, and WB shift registers while held, letting photographers compare the original un-filtered viewfinder feed against the active Ricoh film preset in real time.
 - **Tri-Lingual Floating Compare Badge (`PictureEffectPlusStableLayout.smali`)**:
-  - Injected `attachCompareBadge()` / `detachCompareBadge()` into `StableLayout` lifecycle (`createView()` / `detachView()`), displaying a high-contrast centered translucent badge (`"ORIGINAL (BEFORE)"`, `"原片對比 (Original)"`, `"原片对比 (Original)"`) in shooting view and updating the preset title inside the live menu.
+  - Injected `attachCompareBadge()` / `detachCompareBadge()` into `StableLayout` lifecycle (`createView()` / `detachView()`), displaying a high-contrast centered translucent badge (`"ORIGINAL (BEFORE)"` in English, plus localized Traditional/Simplified Chinese variants) in shooting view and updating the preset title inside the live menu.
 - **Fail-Safe Filter Restoration**:
   - Hooked `pushedS1Key()` (half-press shutter), `StableLayout.onPause()`, and `OptionMenuLayout.onPause()` to invoke `RicohHook.ensureFilterRestored()`, guaranteeing the active Ricoh preset is immediately re-applied if the user half-presses the shutter, exits the menu, or switches modes while holding C2.
 - **Tier 5 Bytecode Integrity Auditor Expansion**:
@@ -91,12 +91,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Injected `RicohHook.isRicohPreset()` check into `PictureEffectPlusDriveModeController.smali` (`isAvailable(Ljava/lang/String;)Z`), unlocking all drive modes (Continuous Hi/Mid/Lo, Speed Priority Continuous, Self-timer, Bracket) across **all 5 film presets**.
 - **Authentic Leica Steve McCurry Documentary Profile (Preset Slot 5 Upgrade)**:
   - Decomposed tone curve and color matrix mathematically directly from genuine `Leica_SteveMcCurry.cube`.
-  - **Calibrated Leica Color Matrix**: Implemented hardware 3×3 RGB matrix `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]` capturing the iconic warm golden Leica color science ("德味暖金"), vibrant primaries, and natural skin tones with neutral pre-ISP LB=0 balance.
+  - **Calibrated Leica Color Matrix**: Implemented hardware 3×3 RGB matrix `[1118, -62, -32, -23, 1070, -23, -45, -29, 1098]` capturing the iconic warm golden Leica color science, vibrant primaries, and natural skin tones with neutral pre-ISP LB=0 balance.
   - **1024-Point Gamma Curve**: 10-bit non-linear tone curve with pure slide film black level ($D_{\min} = 0$), dense shadow gradations, and a 1.35 contrast slope.
-  - **Tri-Lingual Localization**: Updated dial titles, OSD labels, and guide descriptions:
-    - English: `Leica McCurry` / `Authentic Leica Steve McCurry warm documentary profile`
-    - Traditional Chinese: `徠卡麥凱瑞` / `徠卡官方 Steve McCurry 經典暖金德味紀實色彩`
-    - Simplified Chinese: `徕卡麦凯瑞` / `徕卡官方 Steve McCurry 经典暖金德味纪实色彩`
+  - **Tri-Lingual Localization**: Updated dial titles, OSD labels, and guide descriptions across English (`Leica McCurry` / `Authentic Leica Steve McCurry warm documentary profile`), Traditional Chinese, and Simplified Chinese.
 
 ## [1.7.0] - 2026-09-29 (B2.5)
 
@@ -107,10 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **1024-Point Non-Linear Tone Curve**: Engineered custom Gamma curve with baked-in -0.33 EV underexposure to densify midtones and shadow gradations, combined with a 1.35 contrast slope and gentle highlight roll-off.
   - **Calibrated Kodachrome 64 Color Matrix**: Decomposed and mapped asymmetric color matrix `[1115, -87, -4, 31, 1011, -18, 9, 62, 953]` directly into hardware registers, delivering signature warm golden-amber highlights, vivid reds/yellows, and deep cyan-leaning skies.
   - **Pre-ISP Hardware White Balance Offset**: Embedded hardware LB=+2 (warm amber light balance) shift, infusing scenes with Steve McCurry's hallmark "golden hour" warmth and rich skin tones.
-  - **Tri-Lingual Localization**: Injected runtime adaptive titles and guides across camera dials, OSD badges, and help menus:
-    - English: `Steve McCurry` / `Steve McCurry Kodachrome documentary film profile`
-    - Traditional Chinese: `麥凱瑞 Kodachrome` / `馬格南大師 Steve McCurry 經典 Kodachrome 濃郁暖調紀實底片色彩`
-    - Simplified Chinese: `麦凯瑞 Kodachrome` / `马格南大师 Steve McCurry 经典 Kodachrome 浓郁暖调纪实胶片色彩`
+  - **Tri-Lingual Localization**: Injected runtime adaptive titles and guides across camera dials, OSD badges, and help menus for English (`Steve McCurry` / `Steve McCurry Kodachrome documentary film profile`), Traditional Chinese, and Simplified Chinese.
   - **Hardware Neutralization Guarantee**: Enforced `sIdentityMatrix` reset and register restoration upon preset switching or app exit, preventing unwanted color contamination across camera restarts.
 
 ## [1.6.0] - 2026-09-18 (B2.4)
@@ -122,7 +116,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Injected `filterQualityAvailability` hook into `PictureQualityController.smali` to override `AvailableInfo.isAvailable()` and unlock quality options.
   - Enables simultaneous capture of real-time Ricoh film simulation JPEGs and untouched 14-bit ARW raw files.
 - **Tri-Lingual Menu & Guide Strings**:
-  - Added localized display names and explanatory guides for `RAW & JPEG` and `RAW` in English, Traditional Chinese (`RAW與JPEG`), and Simplified Chinese (`RAW与JPEG`).
+  - Added localized display names and explanatory guides for `RAW & JPEG` and `RAW` across English, Traditional Chinese, and Simplified Chinese.
 
 ## [1.5.0] - 2026-09-13 (B2.3)
 
@@ -168,20 +162,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented dynamic runtime locale detection using Android's underlying `Locale.getDefault()`.
   - Automatically identifies whether the camera firmware is running in **English / Global (0)**, **Traditional Chinese (1, Taiwan / Hong Kong / Macau)**, or **Simplified Chinese (2, Mainland China)** with zero manual configuration.
 - **Dynamic Localized Presets & Guides (`getFilterName` & `getFilterGuide`)**:
-  - Dynamically switches filter names on the fly across in-camera menus, floating OSD badges, and dial scrolling:
-    - **`pop-color`**: `Ricoh GR Positive Film` / `理光 GR 正片` / `理光 GR 正片`
-    - **`retro-photo`**: `Ricoh Negative Film` / `理光 負片` / `理光 负片`
-    - **`richtone-mono`**: `High Contrast B&W` / `高對比黑白` / `高对比黑白`
-    - **`rough-mono`**: `Moriyama Daido B&W` / `森山大道風` / `森山大道风`
-    - **`watercolor`**: `Cross Process` / `正負逆沖` / `正负逆冲`
+  - Dynamically switches filter names on the fly across in-camera menus, floating OSD badges, and dial scrolling (English, Traditional Chinese, and Simplified Chinese):
+    - **`pop-color`**: `Ricoh GR Positive Film`
+    - **`retro-photo`**: `Ricoh Negative Film`
+    - **`richtone-mono`**: `High Contrast B&W`
+    - **`rough-mono`**: `Moriyama Daido B&W`
+    - **`watercolor`**: `Cross Process`
   - Dynamically localizes detailed guide texts (`getMenuItemGuideText`) for all 5 presets.
 - **Dynamic App Title Binding in UI**:
-  - Bound shooting OSD overlay title (`AppNameView`) and option menu header (`mScreenTitle`) dynamically to `RicohHook.getAppTitle()`, showing `Ricoh Camera`, `理光相機`, or `理光相机`.
+  - Bound shooting OSD overlay title (`AppNameView`) and option menu header (`mScreenTitle`) dynamically to `RicohHook.getAppTitle()`, displaying `Ricoh Camera` in English and localized equivalents in Chinese locales.
 - **Tri-State `resources.arsc` Launcher Localization**:
-  - Repacked global resource string pool to map camera system launcher entries:
-    - Traditional Chinese: `理光相機`
-    - Simplified Chinese: `理光相机`
-    - English and 30+ other international camera languages: `Ricoh Camera`
+  - Repacked global resource string pool to map camera system launcher entries across English/30+ international languages (`Ricoh Camera`), Traditional Chinese, and Simplified Chinese.
 
 ## [1.2.0] - 2026-09-12 (B2.0)
 
@@ -220,7 +211,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Matrix Reset Hardware Bypass**:
   - In `RicohHook.resetHook`, passes `null` to `CameraEx$ParametersModifier.setRGBMatrix(null)` instead of writing an identity matrix, allowing BIONZ X ISP to cleanly bypass hardware matrix multiplier logic and save battery power.
 - **Typo Fix**:
-  - Corrected guide string typo `"森山大道风粗粞高对比黑白"` to `"森山大道风粗粝高对比黑白"`.
+  - Corrected a typo in the Simplified Chinese guide string for the Moriyama Daido preset.
 
 ## [1.1.3] - 2026-09-10 (B1.3)
 

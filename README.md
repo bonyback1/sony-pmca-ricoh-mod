@@ -23,7 +23,7 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
   - Fast-path HAL/DMA deduplication (`sAppliedPreset` / `sAppliedCameraHash`), `Locale` caching, `AppLog` trace silencing, and single-decode menu adapters eliminate redundant IPC/bitmap overhead.
 
 - 🔍 **Instant C2 / Delete Hold-to-Compare (Before/After)**:
-  - Press and hold the **C2 / Delete** button in either shooting view or the live preset menu to bypass Ricoh ISP registers in real time, revealing the original un-filtered scene with a tri-lingual floating indicator (`ORIGINAL (BEFORE)` / `原片对比 (Original)` / `原片對比 (Original)`).
+  - Press and hold the **C2 / Delete** button in either shooting view or the live preset menu to bypass Ricoh ISP registers in real time, revealing the original un-filtered scene with a floating indicator (`ORIGINAL (BEFORE)` in English, plus localized Chinese variants).
   - Releasing the key, half-pressing the shutter (`pushedS1Key`), or pausing the layout immediately restores the active Ricoh film profile.
 
 - 🔄 **User Camera State Isolation & Faithful Restoration**:
@@ -48,10 +48,7 @@ Deeply transforms Sony's official "Picture Effect+" PlayMemories Camera App into
   Directly interfaces with Sony's proprietary library `com.sony.scalar.hardware.CameraEx` to write directly to hardware registers. Still capture executes via `SingleProcess` $\rightarrow$ `CameraEx.burstableTakePicture()`, completely bypassing slow software CPU RAW processing. Autofocus, shutter trigger, burst shooting, and live view operate with zero added latency.
 - 🌐 **Runtime Adaptive Multi-Language Engine (Zero-Config)**:
   - Dynamically perceives camera system locale via `Locale.getDefault()` without requiring separate APKs.
-  - Seamlessly and automatically renders native translations across app launcher icons, live view OSD badges, option menus, dial scrolling indicators, and help guides:
-    - **English & International**: `Ricoh Camera`, `Ricoh GR Positive Film`, `Ricoh Negative Film`, `High Contrast B&W`, `Moriyama Daido B&W`, `Steve McCurry`.
-    - **繁體中文 (台灣 / 香港)**: `理光相機`, `理光 GR 正片`, `理光 負片`, `高對比黑白`, `森山大道風`, `麥凱瑞 Kodachrome`.
-    - **简体中文 (大陆)**: `理光相机`, `理光 GR 正片`, `理光 负片`, `高对比黑白`, `森山大道风`, `麦凯瑞 Kodachrome`.
+  - Seamlessly and automatically renders native translations across app launcher icons, live view OSD badges, option menus, dial scrolling indicators, and help guides for **English & International** (`Ricoh Camera`, `Ricoh GR Positive Film`, `Ricoh Negative Film`, `High Contrast B&W`, `Moriyama Daido B&W`, `Steve McCurry`), **Traditional Chinese**, and **Simplified Chinese**.
 - 🌈 **Authentic Ricoh Split Toning & Color Reproduction**:
   - **Pre-ISP Hardware WB Shifts**: Injects precise LB (Light Balance / amber-blue) and CC (Color Compensation / green-magenta) offsets, providing a warm slide base or gentle vintage negative undertone. Automatically restores user original WB upon exiting the app.
   - **1024-Point Gamma Curve with Baked EV**: Baked -0.33 EV under-exposure in Positive Film and Moriyama B&W suppresses harsh blown-out highlights; baked +0.33 EV boost with lifted black floor in Negative Film replicates wide dynamic latitude analog print look.

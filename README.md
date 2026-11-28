@@ -1,12 +1,6 @@
 # Sony PMCA Ricoh Film Simulation Camera Mod
 
 <p align="center">
-  <strong>English</strong> |
-  <strong><a href="README.zh-CN.md">简体中文</a></strong> |
-  <strong><a href="README.zh-TW.md">繁體中文</a></strong>
-</p>
-
-<p align="center">
   <img src="https://img.shields.io/badge/Platform-Sony%20PMCA%20%2F%20Android%204.1.2-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Hardware%20ISP-Zero%20Lag%20%2F%20Burst%20OK-brightgreen?style=flat-square" alt="Hardware ISP">
   <img src="https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square" alt="License">
@@ -171,8 +165,7 @@ For in-depth technical analysis and register maps, see [SONY_A6300_RICOH_FILTER_
 │   ├── workflows/ci.yml       # Continuous integration automated test workflow
 │   └── ISSUE_TEMPLATE/        # Issue and feature request templates
 ├── docs/                      # Core technical guides and documentation
-│   ├── SONY_A6300_RICOH_FILTER_MOD_GUIDE.md
-│   └── A6300连接手机App指南.md
+│   └── SONY_A6300_RICOH_FILTER_MOD_GUIDE.md
 ├── src/                       # Open-source source code
 │   ├── smali/RicohHook.smali  # Hardware ISP register injection core class
 │   ├── patches/               # Smali controller patch diffs
@@ -187,9 +180,7 @@ For in-depth technical analysis and register maps, see [SONY_A6300_RICOH_FILTER_
 ├── .gitignore                 # Git ignore rules (isolates proprietary binaries & keys)
 ├── CHANGELOG.md               # Version history
 ├── LICENSE                    # Apache 2.0 license & disclaimer
-├── README.md                  # English Documentation (Default)
-├── README.zh-CN.md            # Simplified Chinese Documentation
-└── README.zh-TW.md            # Traditional Chinese Documentation
+└── README.md                  # Documentation
 ```
 
 ---
